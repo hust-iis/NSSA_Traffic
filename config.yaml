@@ -3,6 +3,6 @@ mq:
   traffic_topic: net-traffic
   event_topic: abnormal-events
 
-traffic_gethering:
-  interface: eno1
+traffic_gathering:
+  interface: en1
   capture_filter: tcp
