@@ -8,7 +8,7 @@ from sklearn.preprocessing import LabelEncoder
 
 import sys
 from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parents[2]))
+sys.path.append(str(Path(__file__).resolve().parents[1]))
 from msg_models.models import AbnormalFlowModel, FLOW_TYPE_DDOS
 
 class DDoS_Detector:
@@ -66,7 +66,7 @@ class DDoS_Detector:
             if len(pkts) > 0.3*len(pkt_list):
                 event = AbnormalFlowModel(
                     type=FLOW_TYPE_DDOS,
-                    time=time.time(),
+                    time=datetime.now(),
                     src="",
                     dst=ip,
                     detail=copy.deepcopy(pkts))

@@ -2,7 +2,7 @@ import yaml
 from multiprocessing import Process
 from kafka import KafkaProducer, KafkaConsumer
 
-from ddos import detect
+from abnomal_traffic.ddos import detect
 
 # 解析配置
 def init_config(config_file):
@@ -10,9 +10,7 @@ def init_config(config_file):
         config = yaml.load(f, Loader=yaml.Loader)
         return config
 
-def main():
-    # 获取配置
-    args_config = init_config('/home/dachilles/Workspace/NSSA_system/NSSA_Traffic/TrafficAnalyzer/config.yaml')
+def start_traffic(args_config):
     # 创建进程池
     processes = []
     # ddos 
@@ -29,9 +27,8 @@ def main():
                              model_path=args_config['abnormal_traffic']['ddos']['model'],
                              encoder_path=args_config['abnormal_traffic']['ddos']['encoder']
                              )
+    # ddos_detector.detect()
     processes.append(Process(target=ddos_detector.detect, args=(1000,)))
-
-
 
     # 开始进程
     for p in processes:
@@ -39,4 +36,7 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    # 获取配置
+    args_config = init_config('/home/dachilles/Workspace/NSSA_system/NSSA_Traffic/TrafficAnalyzer/config.yaml')
+    # 开始流量检测
+    start_traffic(args_config)
