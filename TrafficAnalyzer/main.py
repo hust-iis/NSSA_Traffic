@@ -33,10 +33,13 @@ def start_traffic(args_config):
     # 开始进程
     for p in processes:
         p.start()
+    # 等待所有子进程执行完毕
+    for p in processes:
+        p.join()
 
 
 if __name__ == '__main__':
     # 获取配置
-    args_config = init_config('/home/dachilles/Workspace/NSSA_system/NSSA_Traffic/TrafficAnalyzer/config.yaml')
+    args_config = init_config('./config.yaml')
     # 开始流量检测
     start_traffic(args_config)

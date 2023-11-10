@@ -60,7 +60,11 @@ class DDoS_Detector:
                 ip = pkt.ip
             elif ip_layer == 'ipv6':
                 ip = pkt.ipv6
-            dst_ip_dict[ip]  = dst_ip_dict.get(ip.addr, []).append(pkt)
+            # 更新字典
+            if ip.addr in dst_ip_dict:
+                dst_ip_dict[ip.addr].append(pkt)
+            else:
+                dst_ip_dict[ip.addr] = [pkt]
         # 目标IP超过一定值则认为是真正目标
         for ip, pkts in dst_ip_dict.items():
             if len(pkts) > 0.3*len(pkt_list):
