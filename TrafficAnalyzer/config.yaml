@@ -3,8 +3,11 @@ mq:
   traffic_topic: net-traffic
   event_topic: abnormal-events
   ddos_group_id: ddos
+  botnet_group_id: botnet
   
 abnormal_traffic:
   ddos:
     model: /home/dachilles/Workspace/NSSA_system/NSSA_Traffic/TrafficAnalyzer/abnomal_traffic/ddos/Models/231110_2
     encoder: /home/dachilles/Workspace/NSSA_system/NSSA_Traffic/TrafficAnalyzer/abnomal_traffic/ddos/Models/231110_2.enc
+  botnet:
+    model: ./abnomal_traffic/botnet/Models/model.pkl
