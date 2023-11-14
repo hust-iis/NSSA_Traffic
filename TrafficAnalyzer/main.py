@@ -83,7 +83,7 @@ def start_traffic(args_config):
                                            model_path=args_config['abnormal_traffic']['virus']['model']
                                            )
     virus_detector.detect()
-    # processes.append(Process(target=virus_detector.detect))
+    processes.append(Process(target=virus_detector.detect))
 
     # worm
     # 消息队列设置
