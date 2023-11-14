@@ -17,7 +17,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from msg_models.models import AbnormalFlowModel, FLOW_TYPE_VIRUS
 
 
-class virus_Detector:
+class Virus_Detector:
     # 初始化：配置项
     def __init__(self, test_path, model_path, traffic_consumer, event_producer, topic) -> None:
         # 消息队列
