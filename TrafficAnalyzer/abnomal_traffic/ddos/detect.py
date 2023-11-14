@@ -8,8 +8,9 @@ from sklearn.preprocessing import LabelEncoder
 
 import sys
 from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parents[1]))
-from msg_models.models import AbnormalFlowModel, FLOW_TYPE_DDOS
+
+from abnomal_traffic.msg_models.models import AbnormalFlowModel, FLOW_TYPE_DDOS
+
 
 class DDoS_Detector:
     # 初始化
