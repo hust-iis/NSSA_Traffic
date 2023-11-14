@@ -3,8 +3,20 @@ mq:
   traffic_topic: net-traffic
   event_topic: abnormal-events
   ddos_group_id: ddos
-  
+  trojan_group_id: trojan
+  worm_group_id: worm
+  virus_group_id: virus
+
 abnormal_traffic:
   ddos:
     model: /home/dachilles/Workspace/NSSA_system/NSSA_Traffic/TrafficAnalyzer/abnomal_traffic/ddos/Models/231110_2
     encoder: /home/dachilles/Workspace/NSSA_system/NSSA_Traffic/TrafficAnalyzer/abnomal_traffic/ddos/Models/231110_2.enc
+  trojan:
+    model: ./Trojan/Model/model.sav
+    test_path: ./Trojan/test
+  virus:
+    model: ./Virus/Model/model.sav
+    test_path: ./Virus/test
+  worm:
+    model: ./Worm/Model/model.sav
+    test_path: ./Worm/test

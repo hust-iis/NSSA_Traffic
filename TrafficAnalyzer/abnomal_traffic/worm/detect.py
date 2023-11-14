@@ -1,6 +1,9 @@
-import datetime
+import copy
+import time
+from datetime import datetime
 import csv
 import os
+import sys
 import pickle
 from queue import Queue
 import pandas as pd
@@ -8,36 +11,33 @@ import pyinotify
 from distutils.log import info
 from elftools.elf.elffile import ELFFile
 import sys
-sys.path.append("../../abnormal-attack")
-import mymodels.situation_event_sqlalchemy
+from pathlib import Path
+from kafka import KafkaConsumer
 
-class Virus_Detector:
+sys.path.append(str(Path(__file__).resolve().parents[1]))
+from msg_models.models import AbnormalFlowModel, FLOW_TYPE_WORM
+
+class worm_Detector:
     # 初始化：配置项
-    def __init__(self, test_path, model_path, event_queue=Queue()) -> None:
-        # 事件队列
-        self.event_queue = event_queue
-        self.test_path = test_path      # 态势感知需要监控多个路径，因此需要一个列表
+    def __init__(self, test_path, model_path, traffic_consumer, event_producer, topic) -> None:
+        # 消息队列
+        self.MQ_Traffic = traffic_consumer
+        self.MQ_Event = event_producer
+        self.MQ_Event_Topic = topic
+        # 目录
+        self.test_path = test_path
         self.model_path = model_path
-        # 非重复值集合，用于存储已扫描过的文件路径
-        self.processed_files = set()
 
-    # 记录攻击
-    def log_attack(self,info):
-        event = models.situation_event_sqlalchemy.SituationEvent()
-        event.event_type = models.situation_event_sqlalchemy.EVENT_TYPE_VIRUS
-        event.happened_at = datetime.datetime.now()
-        event.event_info = f"detect file: {info} is virus"
-        self.event_queue.put(event)
 
-    # 检测某一路径下的文件是否为恶意文件，是则记录攻击
-    def checkVirus(self, filepath):
+
+    def checkWorm(self, filepath):
 
         input = filepath
-        label = 'test_virus'
+        label = 'test_worm'
 
         try:
             info_dictionaries = []
-            labelCsvFile = "./Virus/Data/%s.csv"%label
+            labelCsvFile = "./Worm/Data/%s.csv"%label
 
             if os.path.isdir(input):
                 input_dir = input
@@ -46,19 +46,18 @@ class Virus_Detector:
                     if(info_dictionary == None):
                         continue
                     info_dictionaries.append(info_dictionary)
-                
+
                 df = pd.DataFrame(info_dictionaries)
                 df.to_csv(labelCsvFile, index=False)
-                # print("It's a directory.")
                 
+
             elif os.path.isfile(input):
                 input_file = input
                 info_file = get_elf_info(input_file, label)
                 df = pd.DataFrame(info_file)
                 df.to_csv(labelCsvFile, index=False)
-                # print("It's a file.")
-
                 
+
         except pd.errors.EmptyDataError:
             print("Error: Get_elf_info File is empty.")
         except pd.errors.ParserError:
@@ -70,7 +69,7 @@ class Virus_Detector:
             # print("Finish cleaning ...")
 
             # 读取数据处理的中转文件
-            labelCsvFile = "./Virus/Data/%s.csv"%label
+            labelCsvFile = "./Worm/Data/%s.csv"%label
             df = pd.read_csv(labelCsvFile, low_memory=False)
 
             # 进行数据处理
@@ -114,16 +113,14 @@ class Virus_Detector:
             for file, ans in zip(df['file_name'], pred):
                 if os.path.isdir(input):        # 扫描的是路径
                     file_path = os.path.join(input, file)
-                    print(file_path, ans)
+                    print(file_path, ans+1)
                     if ans == 1:
-                        self.log_attack(file_path)
-
+                        return 1
                 elif os.path.isfile(input):
                     file_path = input           # 扫描的是文件
                     print(file_path, ans)
                     if ans == 1:
-                        self.log_attack(file_path)
-
+                        return 1
 
         except pd.errors.EmptyDataError:
             # print("Error: Handle File is empty.")
@@ -131,84 +128,72 @@ class Virus_Detector:
         except pd.errors.ParserError:
             # print("Error: Handle Unable to parse the file.")
             pass
-
-        
-
-    # 回调函数，初始时执行全量扫描，然后对路径进行监控，实现增量扫描
-    def detect(self):
-        try:
-            # 定义监视器对象，监视指定目录下的文件变化
-            watchManager = pyinotify.WatchManager() # 管理监视文件系统的监视器对象
-            mask = pyinotify.IN_CREATE | pyinotify.IN_MODIFY
-            handler = pyinotify.ProcessEvent()
-            handler.process_IN_CREATE = self.process_IN_CREATE
-            handler.process_IN_MODIFY = self.process_IN_MODIFY
-            notifier = pyinotify.Notifier(watchManager, handler)
-            wdd = []
-
-
-            # 设置需要监控的目录
-            directories_to_watch = self.test_path
-
-            # 进行全面扫描
-            print('Performing full scan...')
-            for path in  directories_to_watch:
-                # 检查目录是否存在，存在则加入监控
-                if os.path.exists(path):      
-                    wdd.append(watchManager.add_watch(path, mask))
-                    print("full scan: " + path)      
-                else:
-                    print(f"Directory '{path}' does not exist.")
-            
-
-            self.perform_full_scan(self.test_path)
-            notifier.loop()
-
-        except KeyboardInterrupt:
-            pass
-        
-
-
-    # 执行全量扫描
-    def perform_full_scan(self, directories):
-        test_paths = directories
-        for path in test_paths:
-            # 检查目录是否存在，存在则进行全量扫描
-            if os.path.exists(path):      
-                self.checkVirus(path)
-                for root, dirs, files in os.walk(path):
-                    for filename in files:
-                        file_path = os.path.join(root, filename)
-                        if file_path not in self.processed_files:    # 文件未被处理过
-                            self.processed_files.add(file_path)  #将已经检测了的文件路径加入到processed_files集合中去
-            else:
-                continue
-
-
-    # 执行全量扫描
-    def perform_incremental_scan(self, incremental_file_path):
-        self.checkVirus(incremental_file_path)
-        for root, dirs, files in os.walk(incremental_file_path):
-            for filename in files:
-                file_path = os.path.join(root, filename)
-                if file_path not in self.processed_files:    # 文件未被处理过
-                    self.processed_files.add(file_path)  #将已经检测了的文件路径加入到processed_files集合中去
-
-
-    # inotify 的回调函数，在文件新增时被调用
-    def process_IN_CREATE(self, event):
-        if event.pathname not in self.processed_files:
-            self.perform_incremental_scan(event.pathname)
-            # self.perform_full_scan(event.pathname)
-            self.processed_files.add(event.pathname)
-
-    # inotify 的回调函数，在文件修改时被调用
-    def process_IN_MODIFY(self, event):
-        if event.pathname not in self.processed_files:
-            # self.perform_full_scan(event.pathname)
-            self.perform_incremental_scan(event.pathname)
-            self.processed_files.add(event.pathname)
+        return 0
     
+
+    def detect(self, file_path):
+        # 判断传参
+        if len(file_path) == 0:
+            file_path = self.test_path
+
+        filename = 'other.abc'
+        # 逐包读取
+        for msg in self.MQ_Traffic:
+            # 获取ftp传输的文件
+            pkt = pickle.loads(msg.value)
+            # 确定传输文件名以及后缀
+            if len(pkt.layers) >= 4:
+                my_request_command = ""
+                my_request_arg = ""
+                if pkt.layers[3].layer_name == 'ftp':
+                    ftp_pkt = pkt.layers[3]
+                    print("ftp输出")
+                    print(pkt.layers[3].field_names)
+                    if 'request_command' in pkt.layers[3].field_names:
+                        print("request_command")
+                        my_request_command = pkt.layers[3].request_command
+                        print(pkt.layers[3].request_command)
+                    if 'request_arg' in pkt.layers[3].field_names:
+                        print("request_arg")
+                        my_request_arg = pkt.layers[3].request_arg
+                        print(pkt.layers[3].request_arg)
+                    if my_request_command == 'RETR':
+                        filename = my_request_arg
+            if filename == 'other.abc':
+                continue
+            else:
+                # 已经获取传输的文件名，保存FTP中传输的文件数据为文件用于病毒检测
+                print(pkt.highest_layer)
+                dst_ip = pkt.ip.dst
+                src_ip = pkt.ip.src
+                if (len(pkt.layers) >= 4 and pkt.layers[3].layer_name == 'ftp-data'
+                        and pkt.highest_layer == 'DATA-TEXT-LINES'):
+                    print("完整的FTP-DATA pkt")
+                    print(pkt)
+                    ftp_data = pkt.layers[9]
+                    # 保存ftp文件到test目录下
+                    writefile(filename, ftp_data, file_path)
+
+                # checkTrojan
+                checkfile = file_path + filename
+                res = self.checkWorm(checkfile)
+                if res == 1:
+                    # 发送消息到事件队列
+                    event = AbnormalFlowModel(
+                        type=FLOW_TYPE_WORM,
+                        time=datetime.now(),
+                        src=src_ip,
+                        dst=dst_ip,
+                        detail=copy.deepcopy(pkt))
+                    message = pickle.dumps(event)
+                    self.MQ_Event.send(self.MQ_Event_Topic, message)
+
+                # 删除文件
+                os.remove(checkfile)
+                # 修改filename为默认值
+                filename = 'other.abc'
+
+
 
 
 # 处理文件，获取elf特征值，存入处理csv中
@@ -329,7 +314,6 @@ def get_elf_info(elf, label):
                 dwarf_info_debug_pubtypes_sec_size = None
                 dwarf_info_debug_pubtypes_sec_address = None
             dwarf_info_debug_pubnames_sec = (elffile.get_dwarf_info().debug_pubnames_sec)
-            
             if dwarf_info_debug_pubnames_sec is not None:
                 dwarf_info_debug_pubnames_sec_name = (elffile.get_dwarf_info().debug_pubnames_sec.name)
                 dwarf_info_debug_pubnames_sec_global_offset = (elffile.get_dwarf_info().debug_pubnames_sec.global_offset)
@@ -340,7 +324,6 @@ def get_elf_info(elf, label):
                 dwarf_info_debug_pubnames_sec_global_offset = None
                 dwarf_info_debug_pubnames_sec_size = None
                 dwarf_info_debug_pubnames_sec_address = None
-            
             has_ehabi_info = (elffile.has_ehabi_info())
             ehabi_infos = (elffile.get_ehabi_infos())
             machine_arch = (elffile.get_machine_arch())
@@ -502,22 +485,21 @@ def get_elf_info(elf, label):
     except:
         # print("Read Error")
         print(elf, '0')       # 打印文件名
-        # print(os.path.basename(elf), '0')       # 打印文件名
+
 
 # utility function to clean the dataset by generating unique numeric value for the string values in the dataset
 def get_unique_mappings(feature):
-    clean_data = pd.read_csv('./Virus/Data/virus_reordered.csv', low_memory=False)
+    clean_data = pd.read_csv('./Worm/Data/worm_reordered.csv', low_memory=False)
     tmplist = (sorted(clean_data[feature].unique().tolist()))
     tmpdict = {k: (v+1) for v, k in enumerate(tmplist)}
     return tmpdict
 
 
-# 处理数据
 def clean_dataset(label):
     # these are the selected features which we obtained from the dataset during the training phase
     features_list = ['file_name', 'label', 'file_size', 'num_sections', 'num_segments', 'has_dwarf_info', 'dwarf_info_config_machine_arch', 'dwarf_info_config_default_address_size', 'dwarf_info_config_little_endian', 'dwarf_info_debug_info_sec_name', 'dwarf_info_debug_info_sec_global_offset', 'dwarf_info_debug_info_sec_size', 'dwarf_info_debug_info_sec_address', 'dwarf_info_debug_aranges_sec_name', 'dwarf_info_debug_aranges_sec_global_offset', 'dwarf_info_debug_aranges_sec_size', 'dwarf_info_debug_aranges_sec_address', 'dwarf_info_debug_abbrev_sec_name', 'dwarf_info_debug_abbrev_sec_global_offset', 'dwarf_info_debug_abbrev_sec_size', 'dwarf_info_debug_abbrev_sec_address', 'dwarf_info_debug_frame_sec_name', 'dwarf_info_debug_frame_sec_global_offset', 'dwarf_info_debug_frame_sec_size', 'dwarf_info_debug_frame_sec_address', 'dwarf_info_debug_str_sec_name', 'dwarf_info_debug_str_sec_global_offset', 'dwarf_info_debug_str_sec_size', 'dwarf_info_debug_str_sec_address', 'dwarf_info_debug_loc_sec_name', 'dwarf_info_debug_loc_sec_global_offset', 'dwarf_info_debug_loc_sec_size', 'dwarf_info_debug_loc_sec_address', 'dwarf_info_debug_ranges_sec_name', 'dwarf_info_debug_ranges_sec_global_offset', 'dwarf_info_debug_ranges_sec_size', 'dwarf_info_debug_ranges_sec_address', 'dwarf_info_debug_line_sec_name', 'dwarf_info_debug_line_sec_global_offset', 'dwarf_info_debug_line_sec_size', 'dwarf_info_debug_line_sec_address', 'dwarf_info_debug_pubtypes_sec_name', 'dwarf_info_debug_pubtypes_sec_global_offset', 'dwarf_info_debug_pubtypes_sec_size', 'dwarf_info_debug_pubtypes_sec_address', 'dwarf_info_debug_pubnames_sec_name', 'dwarf_info_debug_pubnames_sec_global_offset', 'dwarf_info_debug_pubnames_sec_size', 'dwarf_info_debug_pubnames_sec_address', 'has_ehabi_info', 'ehabi_infos', 'machine_arch', 'shstrndx', 'sec_header_sh_name', 'sec_header_sh_type', 'sec_header_sh_flags', 'sec_header_sh_addr', 'sec_header_sh_offset', 'sec_header_sh_size', 'sec_header_sh_link', 'sec_header_sh_info', 'sec_header_sh_addralign', 'sec_header_sh_entsize', 'elf_head_ident_EI_CLASS', 'elf_head_ident_EI_DATA', 'elf_head_ident_EI_OSABI', 'elf_head_ident_EI_ABIVERSION', 'elf_head_e_type', 'elf_head_e_machine', 'elf_head_e_entry', 'elf_head_e_phoff', 'elf_head_e_shoff', 'elf_head_e_flags', 'elf_head_e_ehsize', 'elf_head_e_phentsize', 'elf_head_e_phnum', 'elf_head_e_shentsize', 'elf_head_e_shnum', 'elf_head_e_shstrndx', 'seg0_head_p_type', 'seg0_PT_LOAD_p_offset', 'seg0_PT_LOAD_p_filesz', 'seg0_PT_LOAD_p_memsz', 'seg0_PT_LOAD_p_flags', 'seg0_PT_LOAD_p_align', 'seg0_PT_LOAD_p_vaddr', 'seg0_PT_LOAD_p_paddr', 'seg1_head_p_type', 'seg1_PT_LOAD_p_offset', 'seg1_PT_LOAD_p_filesz', 'seg1_PT_LOAD_p_memsz', 'seg1_PT_LOAD_p_flags', 'seg1_PT_LOAD_p_align', 'seg1_PT_LOAD_p_vaddr', 'seg1_PT_LOAD_p_paddr', 'seg2_head_p_type', 'seg2_PT_GNU_STACK_p_offset', 'seg2_PT_GNU_STACK_p_filesz', 'seg2_PT_GNU_STACK_p_memsz', 'seg2_PT_GNU_STACK_p_flags', 'seg2_PT_GNU_STACK_p_align', 'seg2_PT_GNU_STACK_p_vaddr', 'seg2_PT_GNU_STACK_p_paddr', 'section__sh_name', 'section__sh_type', 'section__sh_flags', 'section__sh_addr', 'section__sh_offset', 'section__sh_size', 'section__sh_link', 'section__sh_info', 'section__sh_addralign', 'section__sh_entsize', 'section_init', 'section_init_sh_name', 'section_init_sh_type', 'section_init_sh_flags', 'section_init_sh_addr', 'section_init_sh_offset', 'section_init_sh_size', 'section_init_sh_link', 'section_init_sh_info', 'section_init_sh_addralign', 'section_init_sh_entsize', 'section_text', 'section_text_sh_name', 'section_text_sh_type', 'section_text_sh_flags', 'section_text_sh_addr', 'section_text_sh_offset', 'section_text_sh_size', 'section_text_sh_link', 'section_text_sh_info', 'section_text_sh_addralign', 'section_text_sh_entsize', 'section_fini', 'section_fini_sh_name', 'section_fini_sh_type', 'section_fini_sh_flags', 'section_fini_sh_addr', 'section_fini_sh_offset', 'section_fini_sh_size', 'section_fini_sh_link', 'section_fini_sh_info', 'section_fini_sh_addralign', 'section_fini_sh_entsize', 'section_rodata', 'section_rodata_sh_name', 'section_rodata_sh_type', 'section_rodata_sh_flags', 'section_rodata_sh_addr', 'section_rodata_sh_offset', 'section_rodata_sh_size', 'section_rodata_sh_link', 'section_rodata_sh_info', 'section_rodata_sh_addralign', 'section_rodata_sh_entsize', 'section_ctors', 'section_ctors_sh_name', 'section_ctors_sh_type', 'section_ctors_sh_flags', 'section_ctors_sh_addr', 'section_ctors_sh_offset', 'section_ctors_sh_size', 'section_ctors_sh_link', 'section_ctors_sh_info', 'section_ctors_sh_addralign', 'section_ctors_sh_entsize', 'section_dtors', 'section_dtors_sh_name', 'section_dtors_sh_type', 'section_dtors_sh_flags', 'section_dtors_sh_addr', 'section_dtors_sh_offset', 'section_dtors_sh_size', 'section_dtors_sh_link', 'section_dtors_sh_info', 'section_dtors_sh_addralign', 'section_dtors_sh_entsize', 'section_data', 'section_data_sh_name', 'section_data_sh_type', 'section_data_sh_flags', 'section_data_sh_addr', 'section_data_sh_offset', 'section_data_sh_size', 'section_data_sh_link', 'section_data_sh_info', 'section_data_sh_addralign', 'section_data_sh_entsize', 'section_bss', 'section_bss_sh_name', 'section_bss_sh_type', 'section_bss_sh_flags', 'section_bss_sh_addr', 'section_bss_sh_offset', 'section_bss_sh_size', 'section_bss_sh_link', 'section_bss_sh_info', 'section_bss_sh_addralign', 'section_bss_sh_entsize', 'section_shstrtab', 'section_shstrtab_sh_name', 'section_shstrtab_sh_type', 'section_shstrtab_sh_flags', 'section_shstrtab_sh_addr', 'section_shstrtab_sh_offset', 'section_shstrtab_sh_size', 'section_shstrtab_sh_link', 'section_shstrtab_sh_info', 'section_shstrtab_sh_addralign', 'section_shstrtab_sh_entsize']
 
-    given_file = './Virus/Data/%s.csv'%label
+    given_file = './Worm/Data/%s.csv'%label
     given_data = pd.read_csv(given_file, low_memory=False)
     given_data_columns_list = []
     for i in given_data.columns.values:
@@ -526,20 +508,19 @@ def clean_dataset(label):
         if feature not in given_data_columns_list:
             # print("{} was not present, adding it to table with values 0...".format(feature))
             given_data[feature] = ''
-
     for feature in given_data_columns_list:
         if feature not in features_list:
             # print("{} was not present, removing it from table...".format(feature))
             given_data = given_data.drop(feature, axis=1)
 
-    given_data.to_csv('./Virus/Data/virus_modified.csv', index=False)
-    with open('./Virus/Data/virus_modified.csv', 'r') as infile, open('./Virus/Data/virus_reordered.csv', 'w' ,newline='') as outfile:
+    given_data.to_csv('./Worm/Data/worm_modified.csv', index=False)
+    with open('./Worm/Data/worm_modified.csv', 'r') as infile, open('./Worm/Data/worm_reordered.csv', 'w' ,newline='') as outfile:
         fieldnames = features_list
         writer = csv.DictWriter(outfile, fieldnames=fieldnames)
         writer.writeheader()
         for row in csv.DictReader(infile):
             writer.writerow(row)
-    clean_data = pd.read_csv('./Virus/Data/virus_reordered.csv')
+    clean_data = pd.read_csv('./Worm/Data/worm_reordered.csv')
 
     clean_data['has_dwarf_info'] = clean_data['has_dwarf_info'].replace({True: 1, False: 0})
     clean_data['dwarf_info_config_machine_arch'] = clean_data['dwarf_info_config_machine_arch'].replace(get_unique_mappings('dwarf_info_config_machine_arch'))    
@@ -760,4 +741,38 @@ def clean_dataset(label):
 
     clean_data.drop_duplicates(inplace=True)    # drop the duplicate lines
 
-    clean_data.to_csv('./Virus/Data/%s.csv'%label, index=False)   # save the cleaned data to perfect.csv
+    clean_data.to_csv('./Worm/Data/%s.csv'%label, index=False)   # save the cleaned data to perfect.csv
+
+def writefile(filename, ftp_data, file_path):
+    with open(file_path + filename, 'w') as f:
+        f.write(str(ftp_data))
+    print("successfully write my file")
+
+    # 读取文件 调整内容
+    lines = []
+    with open(file_path + filename, 'w') as f:
+        f.readline()
+        line = f.readline()
+        if line:
+            line = line[1:]  # 删除第二行第一个字符
+            line = line.strip("\t")
+            line = line[:-3]
+            lines.append(line)
+        for line in f:
+            line = line.strip("\t")
+            line = line[:-3]
+            print("第n行", line)
+            lines.append(line)
+
+    # 创建新文件并写入内容
+    with open(file_path + 'new_data.txt', 'w') as f:
+        for line in lines:
+            f.write(line + "\n")
+
+    # 删除原文件
+    os.remove(file_path + filename)
+    # 修改新文件名称为原文件名
+    if os.path.exists(file_path + filename):
+        # 删除文件
+        os.remove(file_path + filename)
+    os.rename(file_path + 'new_data.txt', filename)
