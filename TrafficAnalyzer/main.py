@@ -64,10 +64,9 @@ def start_traffic(args_config):
     trojan_detector = Trojan_Detector(traffic_consumer=trojan_consumer,
                                              event_producer=trojan_producer,
                                              topic=args_config['mq']['event_topic'],
-                                             model_path=args_config['abnormal_traffic']['trojan']['model'],
-                                             test_path=args_config['abnormal_traffic']['test_path']
+                                             model_path=args_config['abnormal_traffic']['trojan']['model']
                                              )
-    # trojan_detector.detect()
+    trojan_detector.detect()
     processes.append(Process(target=trojan_detector.detect))
 
     # virus
@@ -81,11 +80,10 @@ def start_traffic(args_config):
     virus_detector = Virus_Detector(traffic_consumer=virus_consumer,
                                            event_producer=virus_producer,
                                            topic=args_config['mq']['event_topic'],
-                                           model_path=args_config['abnormal_traffic']['virus']['model'],
-                                           test_path=args_config['abnormal_traffic']['test_path']
+                                           model_path=args_config['abnormal_traffic']['virus']['model']
                                            )
-    # virus_detector.detect()
-    processes.append(Process(target=virus_detector.detect))
+    virus_detector.detect()
+    # processes.append(Process(target=virus_detector.detect))
 
     # worm
     # 消息队列设置
@@ -98,8 +96,7 @@ def start_traffic(args_config):
     worm_detector = Worm_Detector(traffic_consumer=worm_consumer,
                                          event_producer=worm_producer,
                                          topic=args_config['mq']['event_topic'],
-                                         model_path=args_config['abnormal_traffic']['worm']['model'],
-                                         test_path=args_config['abnormal_traffic']['test_path']
+                                         model_path=args_config['abnormal_traffic']['worm']['model']
                                          )
     # worm_detector.detect()
     processes.append(Process(target=worm_detector.detect))

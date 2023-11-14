@@ -8,10 +8,12 @@ from queue import Queue
 import pandas as pd
 import pyinotify
 from distutils.log import info
+
+import yaml
 from elftools.elf.elffile import ELFFile
 import sys
 from pathlib import Path
-from kafka import KafkaConsumer
+from kafka import KafkaConsumer, KafkaProducer
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 from msg_models.models import AbnormalFlowModel, FLOW_TYPE_VIRUS
@@ -19,13 +21,12 @@ from msg_models.models import AbnormalFlowModel, FLOW_TYPE_VIRUS
 
 class Virus_Detector:
     # 初始化：配置项
-    def __init__(self, test_path, model_path, traffic_consumer, event_producer, topic) -> None:
+    def __init__(self, model_path, traffic_consumer, event_producer, topic) -> None:
         # 消息队列
         self.MQ_Traffic = traffic_consumer
         self.MQ_Event = event_producer
         self.MQ_Event_Topic = topic
         # 目录
-        self.test_path = test_path  # 态势感知需要监控多个路径，因此需要一个列表
         self.model_path = model_path
 
     # 检测某一路径下的文件是否为恶意文件，是则记录攻击
@@ -36,7 +37,7 @@ class Virus_Detector:
 
         try:
             info_dictionaries = []
-            labelCsvFile = "./Virus/Data/%s.csv" % label
+            labelCsvFile = "./abnomal_traffic/virus/Data/%s.csv" % label
 
             if os.path.isdir(input):
                 input_dir = input
@@ -69,7 +70,7 @@ class Virus_Detector:
             # print("Finish cleaning ...")
 
             # 读取数据处理的中转文件
-            labelCsvFile = "./Virus/Data/%s.csv" % label
+            labelCsvFile = "./abnomal_traffic/virus/Data/%s.csv" % label
             df = pd.read_csv(labelCsvFile, low_memory=False)
 
             # 进行数据处理
@@ -133,11 +134,7 @@ class Virus_Detector:
         return 0
 
     # 回调函数，初始时执行全量扫描，然后对路径进行监控，实现增量扫描
-    def detect(self, file_path):
-        # 判断传参
-        if len(file_path) == 0:
-            file_path = self.test_path
-
+    def detect(self):
         filename = 'other.abc'
         # 逐包读取
         for msg in self.MQ_Traffic:
@@ -149,8 +146,7 @@ class Virus_Detector:
                 my_request_arg = ""
                 if pkt.layers[3].layer_name == 'ftp':
                     ftp_pkt = pkt.layers[3]
-                    print("ftp输出")
-                    print(pkt.layers[3].field_names)
+                    print("ftp pkt")
                     if 'request_command' in pkt.layers[3].field_names:
                         print("request_command")
                         my_request_command = pkt.layers[3].request_command
@@ -165,35 +161,35 @@ class Virus_Detector:
                 continue
             else:
                 # 已经获取传输的文件名，保存FTP中传输的文件数据为文件用于病毒检测
-                print(pkt.highest_layer)
                 dst_ip = pkt.ip.dst
                 src_ip = pkt.ip.src
-                if len(pkt.layers) >= 4 and pkt.layers[
-                    3].layer_name == 'ftp-data' and pkt.highest_layer == 'DATA-TEXT-LINES':
-                    print("完整的FTP-DATA pkt")
+                if (len(pkt.layers) >= 4 and pkt.layers[3].layer_name == 'ftp-data'
+                        and pkt.highest_layer == 'DATA-TEXT-LINES'):
+                    print("FTP-DATA pkt")
                     print(pkt)
                     ftp_data = pkt.layers[9]
                     # 保存ftp文件到test目录下
-                    writefile(filename, ftp_data, file_path)
+                    writefile(filename, ftp_data)
 
-                # checkTrojan
-                checkfile = file_path + filename
-                res = self.checkVirus(checkfile)
-                if res == 1:
-                    # 发送消息到事件队列
-                    event = AbnormalFlowModel(
-                        type=FLOW_TYPE_VIRUS,
-                        time=datetime.now(),
-                        src=src_ip,
-                        dst=dst_ip,
-                        detail=copy.deepcopy(pkt))
-                    message = pickle.dumps(event)
-                    self.MQ_Event.send(self.MQ_Event_Topic, message)
+                    # checkTrojan
+                    res = self.checkVirus(filename)
+                    if res == 1:
+                        # 发送消息到事件队列
+                        event = AbnormalFlowModel(
+                            type=FLOW_TYPE_VIRUS,
+                            time=datetime.now(),
+                            src=src_ip,
+                            dst=dst_ip,
+                            detail=copy.deepcopy(pkt))
+                        message = pickle.dumps(event)
+                        self.MQ_Event.send(self.MQ_Event_Topic, message)
 
-                # 删除文件
-                os.remove(checkfile)
-                # 修改filename为默认值
-                filename = 'other.abc'
+                    # 删除文件
+                    # curdir = os.getcwd()
+                    if Path('./abnomal_traffic/virus/'+filename).is_file():
+                        os.remove('./abnomal_traffic/virus/'+filename)
+                    # 修改filename为默认值
+                    filename = 'other.abc'
 
 
 # 处理文件，获取elf特征值，存入处理csv中
@@ -494,7 +490,7 @@ def get_elf_info(elf, label):
 
 # utility function to clean the dataset by generating unique numeric value for the string values in the dataset
 def get_unique_mappings(feature):
-    clean_data = pd.read_csv('./Virus/Data/virus_reordered.csv', low_memory=False)
+    clean_data = pd.read_csv('./Data/virus_reordered.csv', low_memory=False)
     tmplist = (sorted(clean_data[feature].unique().tolist()))
     tmpdict = {k: (v + 1) for v, k in enumerate(tmplist)}
     return tmpdict
@@ -572,7 +568,8 @@ def clean_dataset(label):
                      'section_shstrtab_sh_offset', 'section_shstrtab_sh_size', 'section_shstrtab_sh_link',
                      'section_shstrtab_sh_info', 'section_shstrtab_sh_addralign', 'section_shstrtab_sh_entsize']
 
-    given_file = './Virus/Data/%s.csv' % label
+    # given_file = './abnomal_traffic/virus/Data/%s.csv' % label
+    given_file = './abnomal_traffic/virus/Data/%s.csv' % label
     given_data = pd.read_csv(given_file, low_memory=False)
     given_data_columns_list = []
     for i in given_data.columns.values:
@@ -587,15 +584,15 @@ def clean_dataset(label):
             # print("{} was not present, removing it from table...".format(feature))
             given_data = given_data.drop(feature, axis=1)
 
-    given_data.to_csv('./Virus/Data/virus_modified.csv', index=False)
-    with open('./Virus/Data/virus_modified.csv', 'r') as infile, open('./Virus/Data/virus_reordered.csv', 'w',
+    given_data.to_csv('./abnomal_traffic/virus/Data/_modified.csv', index=False)
+    with open('./abnomal_traffic/virus/Data/virus_modified.csv', 'r') as infile, open('./abnomal_traffic/virus/Data/virus_reordered.csv', 'w',
                                                                       newline='') as outfile:
         fieldnames = features_list
         writer = csv.DictWriter(outfile, fieldnames=fieldnames)
         writer.writeheader()
         for row in csv.DictReader(infile):
             writer.writerow(row)
-    clean_data = pd.read_csv('./Virus/Data/virus_reordered.csv')
+    clean_data = pd.read_csv('./abnomal_traffic/virus/Data/virus_reordered.csv')
 
     clean_data['has_dwarf_info'] = clean_data['has_dwarf_info'].replace({True: 1, False: 0})
     clean_data['dwarf_info_config_machine_arch'] = clean_data['dwarf_info_config_machine_arch'].replace(
@@ -849,17 +846,18 @@ def clean_dataset(label):
 
     clean_data.drop_duplicates(inplace=True)  # drop the duplicate lines
 
-    clean_data.to_csv('./Virus/Data/%s.csv' % label, index=False)  # save the cleaned data to perfect.csv
+    clean_data.to_csv('./abnomal_traffic/virus/Data/%s.csv' % label, index=False)  # save the cleaned data to perfect.csv
 
 
-def writefile(filename, ftp_data, file_path):
-    with open(file_path + filename, 'w') as f:
+def writefile(filename, ftp_data):
+    tmpfile = filename
+    with open(tmpfile, 'w') as f:
         f.write(str(ftp_data))
     print("successfully write my file")
 
     # 读取文件 调整内容
     lines = []
-    with open(file_path + filename, 'w') as f:
+    with open(tmpfile, 'r') as f:
         f.readline()
         line = f.readline()
         if line:
@@ -870,18 +868,40 @@ def writefile(filename, ftp_data, file_path):
         for line in f:
             line = line.strip("\t")
             line = line[:-3]
-            print("第n行", line)
             lines.append(line)
 
     # 创建新文件并写入内容
-    with open(file_path + 'new_data.txt', 'w') as f:
+    with open('new_data.txt', 'w') as f:
         for line in lines:
             f.write(line + "\n")
 
     # 删除原文件
-    os.remove(file_path + filename)
-    # 修改新文件名称为原文件名
-    if os.path.exists(file_path + filename):
-        # 删除文件
-        os.remove(file_path + filename)
-    os.rename(file_path + 'new_data.txt', filename)
+    os.remove(tmpfile)
+
+    os.rename('new_data.txt', tmpfile)
+
+
+#  解析配置
+# def init_config(config_file):
+#     with open(config_file, 'r') as f:
+#         config = yaml.load(f, Loader=yaml.Loader)
+#         return config
+#
+# if __name__ =='__main__':
+#
+#     args_config = init_config('../../config.yaml')
+#     print(args_config)
+#     virus_consumer = KafkaConsumer(args_config['mq']['traffic_topic'],
+#                                    group_id=args_config['mq']['virus_group_id'],
+#                                    bootstrap_servers=args_config['mq']['bootstrap_servers']
+#                                    )
+#     virus_producer = KafkaProducer(bootstrap_servers=args_config['mq']['bootstrap_servers'])
+#     # 创建对象
+#     virus_detector = Virus_Detector(traffic_consumer=virus_consumer,
+#                                            event_producer=virus_producer,
+#                                            topic=args_config['mq']['event_topic'],
+#                                            model_path=args_config['abnormal_traffic']['virus']['model'],
+#                                            test_path=args_config['abnormal_traffic']['virus']['test_path']
+#                                            )
+#     virus_detector.detect()
+

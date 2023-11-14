@@ -6,15 +6,3 @@ mq:
 traffic_gathering:
   interface: ens33
   capture_filter: tcp
-
-Trojan:
-  model_path: ./Trojan/Model/model.sav
-
-Worm:
-  model_path: ./Worm/Model/model.sav
-
-Virus:
-  model_path: ./Virus/Model/model.sav
-
-testpath: ['./test']
-deletepath: './test'
