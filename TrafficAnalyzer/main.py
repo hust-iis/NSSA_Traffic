@@ -5,6 +5,7 @@ from kafka import KafkaProducer, KafkaConsumer
 from abnomal_traffic.botnet.detect import Botnet_Detector
 from abnomal_traffic.ddos.detect import DDoS_Detector
 from abnomal_traffic.virus.detect import Virus_Detector
+from abnomal_traffic.webshell.detect import Webshell_Detector
 from abnomal_traffic.worm.detect import Worm_Detector
 from abnomal_traffic.trojan.detect import Trojan_Detector
 
@@ -62,10 +63,10 @@ def start_traffic(args_config):
     trojan_producer = KafkaProducer(bootstrap_servers=args_config['mq']['bootstrap_servers'])
     # 创建对象
     trojan_detector = Trojan_Detector(traffic_consumer=trojan_consumer,
-                                             event_producer=trojan_producer,
-                                             topic=args_config['mq']['event_topic'],
-                                             model_path=args_config['abnormal_traffic']['trojan']['model']
-                                             )
+                                      event_producer=trojan_producer,
+                                      topic=args_config['mq']['event_topic'],
+                                      model_path=args_config['abnormal_traffic']['trojan']['model']
+                                      )
     trojan_detector.detect()
     processes.append(Process(target=trojan_detector.detect))
 
@@ -78,10 +79,10 @@ def start_traffic(args_config):
     virus_producer = KafkaProducer(bootstrap_servers=args_config['mq']['bootstrap_servers'])
     # 创建对象
     virus_detector = Virus_Detector(traffic_consumer=virus_consumer,
-                                           event_producer=virus_producer,
-                                           topic=args_config['mq']['event_topic'],
-                                           model_path=args_config['abnormal_traffic']['virus']['model']
-                                           )
+                                    event_producer=virus_producer,
+                                    topic=args_config['mq']['event_topic'],
+                                    model_path=args_config['abnormal_traffic']['virus']['model']
+                                    )
     virus_detector.detect()
     processes.append(Process(target=virus_detector.detect))
 
@@ -94,12 +95,31 @@ def start_traffic(args_config):
     worm_producer = KafkaProducer(bootstrap_servers=args_config['mq']['bootstrap_servers'])
     # 创建对象
     worm_detector = Worm_Detector(traffic_consumer=worm_consumer,
-                                         event_producer=worm_producer,
-                                         topic=args_config['mq']['event_topic'],
-                                         model_path=args_config['abnormal_traffic']['worm']['model']
-                                         )
+                                  event_producer=worm_producer,
+                                  topic=args_config['mq']['event_topic'],
+                                  model_path=args_config['abnormal_traffic']['worm']['model']
+                                  )
     # worm_detector.detect()
     processes.append(Process(target=worm_detector.detect))
+
+    # webshell
+    # 消息队列设置
+    webshell_consumer = KafkaConsumer(args_config['mq']['traffic_topic'],
+                                      group_id=args_config['mq']['webshell_group_id'],
+                                      bootstrap_servers=args_config['mq']['bootstrap_servers']
+                                      )
+    webshell_producer = KafkaProducer(bootstrap_servers=args_config['mq']['bootstrap_servers'])
+    # 创建对象
+    webshell_detector = Webshell_Detector(traffic_consumer=webshell_consumer,
+                                          event_producer=webshell_producer,
+                                          topic=args_config['mq']['event_topic'],
+                                          model_path=args_config['abnormal_traffic']['webshell']['model'],
+                                          count_vectorizer_path=args_config['abnormal_traffic']['webshell'][
+                                              'count_vectorizer'],
+                                          transformer_path=args_config['abnormal_traffic']['webshell']['transformer'],
+                                          )
+    # webshell_detector.detect()
+    processes.append(Process(target=webshell_detector.detect, args=()))
 
     # 开始进程
     for p in processes:

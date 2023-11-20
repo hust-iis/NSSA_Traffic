@@ -2,11 +2,13 @@ mq:
   bootstrap_servers: localhost:9092
   traffic_topic: net-traffic
   event_topic: abnormal-events
+
   ddos_group_id: ddos
   botnet_group_id: botnet
   trojan_group_id: trojan
   worm_group_id: worm
   virus_group_id: virus
+  webshell_group_id: webshell
 
 abnormal_traffic:
   ddos:
@@ -20,3 +22,7 @@ abnormal_traffic:
     model: ./abnomal_traffic/virus/Model/model.sav
   worm:
     model: ./abnomal_traffic/worm/Model/model.sav
+  webshell:
+    model: ./abnomal_traffic/ddos/Models/train_model.m
+    count_vectorizer: ./abnomal_traffic/ddos/Models/CountVectorizer.pkl
+    transformer: ./abnomal_traffic/ddos/Models/transformer.pkl
