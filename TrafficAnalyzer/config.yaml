@@ -26,3 +26,5 @@ abnormal_traffic:
     model: ./abnomal_traffic/ddos/Models/train_model.m
     count_vectorizer: ./abnomal_traffic/ddos/Models/CountVectorizer.pkl
     transformer: ./abnomal_traffic/ddos/Models/transformer.pkl
+  xss:
+    model: ./abnomal_traffic/xss/Models/model.sav
