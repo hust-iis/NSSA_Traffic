@@ -22,18 +22,18 @@ def info_to_database(db_settings, info_list):
     create_table_query = """
         CREATE TABLE IF NOT EXISTS abnormal_user_info (
             id INT AUTO_INCREMENT PRIMARY KEY,
+            type int,
             time datetime DEFAULT CURRENT_TIMESTAMP,
-            ip varchar(50),
-            user varchar(50) not null,
+            user_name varchar(50) not null,
             topic varchar(200),
-            abnormal int
+            src_ip varchar(50)
         )
         """
     cursor.execute(create_table_query)
 
 
     insert_query = """
-        insert into abnormal_user_info(ip,user,topic,abnormal) values 
+        insert into abnormal_user_info(type,user_name,topic,src_ip) values 
     """
 
     is_first = True
@@ -43,10 +43,10 @@ def info_to_database(db_settings, info_list):
         is_first = False
         ip, user, topic, abnormal = item
         # print(topic)
-        insert_query += " (\'%s\',\'%s\',\'%s\',\'%s\')" % (ip, user, topic, abnormal)
+        insert_query += " (\'%s\',\'%s\',\'%s\',\'%s\')" % (abnormal, user, topic, ip)
         # print(insert_query)
     
-    print(insert_query)
+    # print(insert_query)
     cursor.execute(insert_query)
     conn.commit()
     
