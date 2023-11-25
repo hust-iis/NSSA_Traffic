@@ -1,12 +1,3 @@
-database:
-  dialect: mysql
-  driver: pymysql
-  name: nssa_traffic
-  host: 222.20.126.128
-  user: root
-  password: HUSTc4150709
-  port: 3306
-
 mq:
   server: localhost:9092
   traffic_topic: net-traffic
@@ -15,6 +6,3 @@ mq:
 traffic_gethering:
   interface: eno1
   capture_filter: tcp
-
-abnormal_user:
-  log_file: TrafficAnalyzer/abnormal-user/mosquitto.8885.log
