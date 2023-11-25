@@ -143,28 +143,28 @@ class Trojan_Detector:
                 my_request_arg = ""
                 if pkt.layers[3].layer_name == 'ftp':
                     ftp_pkt = pkt.layers[3]
-                    print("ftp输出")
+                    # print("ftp输出")
                     print(pkt.layers[3].field_names)
                     if 'request_command' in pkt.layers[3].field_names:
-                        print("request_command")
+                        # print("request_command")
                         my_request_command = pkt.layers[3].request_command
-                        print(pkt.layers[3].request_command)
+                        # print(pkt.layers[3].request_command)
                     if 'request_arg' in pkt.layers[3].field_names:
-                        print("request_arg")
+                        # print("request_arg")
                         my_request_arg = pkt.layers[3].request_arg
-                        print(pkt.layers[3].request_arg)
+                        # print(pkt.layers[3].request_arg)
                     if my_request_command == 'RETR':
                         filename = my_request_arg
             if filename == 'other.abc':
                 continue
             else:
                 # 已经获取传输的文件名，保存FTP中传输的文件数据为文件用于病毒检测
-                print(pkt.highest_layer)
+                # print(pkt.highest_layer)
                 dst_ip = pkt.ip.dst
                 src_ip = pkt.ip.src
                 if len(pkt.layers) >= 4 and pkt.layers[3].layer_name == 'ftp-data' and pkt.highest_layer == 'DATA-TEXT-LINES':
-                    print("完整的FTP-DATA pkt")
-                    print(pkt)
+                    # print("完整的FTP-DATA pkt")
+                    # print(pkt)
                     ftp_data = pkt.layers[9]
                     # 保存ftp文件到test目录下
                     writefile(filename, ftp_data)
