@@ -8,8 +8,8 @@ from abnomal_traffic.virus.detect import Virus_Detector
 from abnomal_traffic.webshell.detect import Webshell_Detector
 from abnomal_traffic.worm.detect import Worm_Detector
 from abnomal_traffic.trojan.detect import Trojan_Detector
-# from abnomal_traffic.xss.detect import XSS_Detector
-from abnomal_traffic.port_scan.detect import Port_Scan_Detector
+from abnomal_traffic.xss.detect import XSS_Detector
+# from abnomal_traffic.port_scan.detect import Port_Scan_Detector
 
 
 # 解析配置
@@ -123,36 +123,36 @@ def start_traffic(args_config):
     # webshell_detector.detect()
     processes.append(Process(target=webshell_detector.detect, args=()))
 
-    # # xss
-    # # 消息队列设置
-    # xss_consumer = KafkaConsumer(args_config['mq']['traffic_topic'],
-    #                              group_id=args_config['mq']['xss_group_id'],
-    #                              bootstrap_servers=args_config['mq']['bootstrap_servers']
-    #                              )
-    # xss_producer = KafkaProducer(bootstrap_servers=args_config['mq']['bootstrap_servers'])
-    # # 创建对象
-    # xss_detector = XSS_Detector(traffic_consumer=xss_consumer,
-    #                             event_producer=xss_producer,
-    #                             topic=args_config['mq']['event_topic'],
-    #                             model_path=args_config['abnormal_traffic']['xss']['model'],
-    #
-    #                             )
-    # # xss_detector.detect()
-    # processes.append(Process(target=xss_detector.detect, args=()))
-
-    # portscan
+    # xss
     # 消息队列设置
-    port_scan_producer = KafkaProducer(bootstrap_servers=args_config['mq']['bootstrap_servers'])
+    xss_consumer = KafkaConsumer(args_config['mq']['traffic_topic'],
+                                 group_id=args_config['mq']['xss_group_id'],
+                                 bootstrap_servers=args_config['mq']['bootstrap_servers']
+                                 )
+    xss_producer = KafkaProducer(bootstrap_servers=args_config['mq']['bootstrap_servers'])
     # 创建对象
-    port_scan_detector = Port_Scan_Detector(event_producer=port_scan_producer,
-                                            topic=args_config['mq']['event_topic'],
-                                            password=args_config['abnormal_traffic']['port_scan']['password'],
-                                            interface=args_config['abnormal_traffic']['port_scan']['interface'],
-                                            snortpath=args_config['abnormal_traffic']['port_scan']['snortpath'],
-                                            luapath=args_config['abnormal_traffic']['port_scan']['luapath']
-                                            )
-    # port_scan_detector.detect()
-    processes.append(Process(target=port_scan_detector.detect, args=()))
+    xss_detector = XSS_Detector(traffic_consumer=xss_consumer,
+                                event_producer=xss_producer,
+                                topic=args_config['mq']['event_topic'],
+                                model_path=args_config['abnormal_traffic']['xss']['model'],
+    
+                                )
+    # xss_detector.detect()
+    processes.append(Process(target=xss_detector.detect, args=()))
+
+    # # portscan
+    # # 消息队列设置
+    # port_scan_producer = KafkaProducer(bootstrap_servers=args_config['mq']['bootstrap_servers'])
+    # # 创建对象
+    # port_scan_detector = Port_Scan_Detector(event_producer=port_scan_producer,
+    #                                         topic=args_config['mq']['event_topic'],
+    #                                         password=args_config['abnormal_traffic']['port_scan']['password'],
+    #                                         interface=args_config['abnormal_traffic']['port_scan']['interface'],
+    #                                         snortpath=args_config['abnormal_traffic']['port_scan']['snortpath'],
+    #                                         luapath=args_config['abnormal_traffic']['port_scan']['luapath']
+    #                                         )
+    # # port_scan_detector.detect()
+    # processes.append(Process(target=port_scan_detector.detect, args=()))
 
     # 开始进程
     for p in processes:
