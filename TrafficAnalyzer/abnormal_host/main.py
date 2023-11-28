@@ -2,10 +2,12 @@ import pymysql
 import yaml
 from pymysql import Connection
 
+
 def init_config(config_file):
     with open(config_file, 'r') as f:
         config = yaml.load(f, Loader=yaml.Loader)
         return config
+
 
 # def info_to_database(db_settings):
 #     con1 = None
@@ -60,13 +62,12 @@ def database_log(db_settings_1, db_settings_2):
             user=db_settings_2['user'],
             password=db_settings_2['password'],
             database=db_settings_2['name'],
-            autocommit = True
+            autocommit=True
         )
 
         # 创建游标
         cursor1 = con1.cursor()
         cursor2 = con2.cursor()
-
 
         create_table_query = """
                         CREATE TABLE IF NOT EXISTS abnormal_attack_abnormalhost (
@@ -88,22 +89,24 @@ def database_log(db_settings_1, db_settings_2):
         detail = ""
         datetime_info = results[0][2]
         cnt = 0
+        insert_query = "insert into abnormal_attack_abnormalhost values (null,%s,%s,%s,%s)"
         for row in results:
             cnt += 1
             ip_info = row[0]
+            #asset表中查询ip对应的资产名（数据库名表名字段名未知）
+            cursor1.execute("select asset_name from asset where ip = %s", (ip_info,))
+            name_info = cursor1.fetchall()
             info_info = row[1]
             if row[2] == datetime_info:
                 detail += info_info
             else:
-                insert_query = "insert into abnormal_attack_abnormalhost values (null,%s,'123',%s,%s)"
-                cursor1.execute(insert_query, [ip_info, detail, datetime_info])
+                cursor1.execute(insert_query, [ip_info, name_info, detail, datetime_info])
                 detail = info_info
             datetime_info = row[2]
             if cnt == len(results):
-                insert_query = "insert into abnormal_attack_abnormalhost values (null,%s,'123',%s,%s)"
-                cursor1.execute(insert_query, [ip_info, detail, datetime_info])
-            print("ip=%s,info=%s,datetime=%s" % \
-                  (ip_info, info_info, datetime_info))
+                cursor1.execute(insert_query, [ip_info, name_info, detail, datetime_info])
+            print("ip=%s,name=%s,info=%s,datetime=%s" % \
+                  (ip_info, name_info, info_info, datetime_info))
         con1.commit()
 
     except Exception as e:
@@ -114,12 +117,12 @@ def database_log(db_settings_1, db_settings_2):
         if con2:
             con2.close()
 
+
 def main():
     args_config = init_config('D:\\NSSA\\NSSA_Traffic\\config.yaml')
-    database_info1 = args_config['database1']
-    database_info2 = args_config['database2']
-    database_log(database_info1,database_info2)
-
+    database_info1 = args_config['database1']  # 报警信息存入数据库
+    database_info2 = args_config['database2']  # 日志存放数据库
+    database_log(database_info1, database_info2)
 
 
 if __name__ == '__main__':
