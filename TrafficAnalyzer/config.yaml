@@ -10,6 +10,7 @@ mq:
   virus_group_id: virus
   webshell_group_id: webshell
   snort_id: snort
+  host_id: host
 
 abnormal_traffic:
   ddos:

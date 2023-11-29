@@ -2,6 +2,7 @@ import yaml
 from multiprocessing import Process
 from kafka import KafkaProducer, KafkaConsumer
 
+from TrafficAnalyzer.abnormal_host.main import AbnormalHost_send
 from abnomal_traffic.botnet.detect import Botnet_Detector
 from abnomal_traffic.ddos.detect import DDoS_Detector
 from abnomal_traffic.virus.detect import Virus_Detector
@@ -151,6 +152,21 @@ def start_traffic(args_config):
                                     )
     # snort_detector.detect()
     processes.append(Process(target=snort_detector.detect, args=()))
+
+    # host
+    # 消息队列设置
+    host_consumer = KafkaConsumer(args_config['mq']['traffic_topic'],
+                                  group_id=args_config['mq']['host_id'],
+                                  bootstrap_servers=args_config['mq']['bootstrap_servers']
+                                  )
+    host_producer = KafkaProducer(bootstrap_servers=args_config['mq']['bootstrap_servers'])
+    # 创建对象
+    host_detector = AbnormalHost_send(traffic_consumer=host_consumer,
+                                      event_producer=host_producer,
+                                      topic=args_config['mq']['event_topic'],
+                                      )
+    # webshell_detector.detect()
+    processes.append(Process(target=host_detector.main, args=()))
 
     # 开始进程
     for p in processes:
