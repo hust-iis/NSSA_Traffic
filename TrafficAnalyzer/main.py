@@ -69,7 +69,7 @@ def start_traffic(args_config):
                                       topic=args_config['mq']['event_topic'],
                                       model_path=args_config['abnormal_traffic']['trojan']['model']
                                       )
-    trojan_detector.detect()
+    # trojan_detector.detect()
     processes.append(Process(target=trojan_detector.detect))
 
     # virus
@@ -85,7 +85,7 @@ def start_traffic(args_config):
                                     topic=args_config['mq']['event_topic'],
                                     model_path=args_config['abnormal_traffic']['virus']['model']
                                     )
-    virus_detector.detect()
+    # virus_detector.detect()
     processes.append(Process(target=virus_detector.detect))
 
     # worm
@@ -134,25 +134,23 @@ def start_traffic(args_config):
     xss_detector = XSS_Detector(traffic_consumer=xss_consumer,
                                 event_producer=xss_producer,
                                 topic=args_config['mq']['event_topic'],
-                                model_path=args_config['abnormal_traffic']['xss']['model'],
-    
-                                )
+                                model_path=args_config['abnormal_traffic']['xss']['model'])
     # xss_detector.detect()
     processes.append(Process(target=xss_detector.detect, args=()))
 
-    # portscan
+    # 使用SNORT完成的三项
     # 消息队列设置
-    port_scan_producer = KafkaProducer(bootstrap_servers=args_config['mq']['bootstrap_servers'])
+    snort_producer = KafkaProducer(bootstrap_servers=args_config['mq']['bootstrap_servers'])
     # 创建对象
-    port_scan_detector = Snort_Detector(event_producer=port_scan_producer,
-                                        topic=args_config['mq']['event_topic'],
-                                        password=args_config['abnormal_traffic']['snort']['password'],
-                                        interface=args_config['abnormal_traffic']['snort']['interface'],
-                                        snortpath=args_config['abnormal_traffic']['snort']['snortpath'],
-                                        luapath=args_config['abnormal_traffic']['snort']['luapath']
-                                        )
-    # port_scan_detector.detect()
-    processes.append(Process(target=port_scan_detector.detect, args=()))
+    snort_detector = Snort_Detector(event_producer=snort_producer,
+                                    topic=args_config['mq']['event_topic'],
+                                    password=args_config['abnormal_traffic']['snort']['password'],
+                                    interface=args_config['abnormal_traffic']['snort']['interface'],
+                                    snortpath=args_config['abnormal_traffic']['snort']['snortpath'],
+                                    luapath=args_config['abnormal_traffic']['snort']['luapath']
+                                    )
+    # snort_detector.detect()
+    processes.append(Process(target=snort_detector.detect, args=()))
 
     # 开始进程
     for p in processes:

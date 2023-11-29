@@ -9,7 +9,7 @@ mq:
   worm_group_id: worm
   virus_group_id: virus
   webshell_group_id: webshell
-  port_scan_id: snort
+  snort_id: snort
 
 abnormal_traffic:
   ddos:
@@ -29,7 +29,7 @@ abnormal_traffic:
     transformer: ./abnomal_traffic/ddos/Models/transformer.pkl
   xss:
     model: ./abnomal_traffic/xss/Models/model.sav
-  port_scan:
+  snort:
     password: 123456
     interface: ens33
     snortpath: /home/xp/snort3-3.1.51.0/build/src/snort
