@@ -7,7 +7,8 @@ import numpy
 import joblib
 from sklearn.neural_network import MLPClassifier
 
-from abnomal_traffic.msg_models.models import AbnormalFlowModel, FLOW_TYPE_WEBSHELL
+from TrafficAnalyzer.message import AbnormalEventMSG, MSG_TYPE_TRAFFIC
+from abnomal_traffic.msg_models.models import AbnormalTraffic, FLOW_TYPE_WEBSHELL
 
 
 class Webshell_Detector:
@@ -83,7 +84,7 @@ class Webshell_Detector:
     # 告警
     def alert(self, pkt):
         # 创建消息
-        event = AbnormalFlowModel(
+        event = AbnormalTraffic(
             type=FLOW_TYPE_WEBSHELL,
             time=datetime.now(),
             src=pkt.ip.src,
@@ -91,5 +92,5 @@ class Webshell_Detector:
             detail=copy.deepcopy(pkt)
         )
         # push消息
-        message = pickle.dumps(event)
+        message = pickle.dumps(AbnormalEventMSG(type=MSG_TYPE_TRAFFIC, data=event))
         self.MQ_Event.send(self.MQ_Event_Topic, message)

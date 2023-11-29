@@ -9,6 +9,7 @@ import yaml
 from kafka import KafkaProducer
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
+from TrafficAnalyzer.message import AbnormalEventMSG, MSG_TYPE_TRAFFIC
 from msg_models.models import AbnormalFlowModel, FLOW_TYPE_PORTSCAN
 
 
@@ -77,7 +78,7 @@ class Port_Scan_Detector:
                     src=json_data["src_ap"],
                     dst=json_data["dst_ap"],
                     detail=json_data["timestamp"])
-                message = pickle.dumps(event)
+                message = pickle.dumps(AbnormalEventMSG(type=MSG_TYPE_TRAFFIC, data=event))
                 if "SNMP" or "SCAN" in json_data["msg"]:
                     print(message)
                 self.MQ_Event.send(self.MQ_Event_Topic, message)

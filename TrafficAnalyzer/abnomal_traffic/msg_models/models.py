@@ -10,7 +10,7 @@ FLOW_TYPE_XSS = 8
 FLOW_TYPE_PORTSCAN = 9
 
 
-class AbnormalFlowModel:
+class AbnormalTraffic:
     def __init__(self, type, time, src, dst, detail):
         self.type = type  # 类型（10种）
         self.time = time  # 发生时间

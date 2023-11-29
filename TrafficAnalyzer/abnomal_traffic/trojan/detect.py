@@ -16,7 +16,8 @@ from pathlib import Path
 from kafka import KafkaConsumer
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
-from msg_models.models import AbnormalFlowModel, FLOW_TYPE_TROJAN
+from TrafficAnalyzer.message import AbnormalEventMSG, MSG_TYPE_TRAFFIC
+from msg_models.models import AbnormalTraffic, FLOW_TYPE_TROJAN
 
 
 class Trojan_Detector:
@@ -173,13 +174,13 @@ class Trojan_Detector:
                     res = self.checkTrojan(filename)
                     if res == 1:
                         # 发送消息到事件队列
-                        event = AbnormalFlowModel(
+                        event = AbnormalTraffic(
                             type=FLOW_TYPE_TROJAN,
                             time=datetime.now(),
                             src=src_ip,
                             dst=dst_ip,
                             detail=copy.deepcopy(pkt))
-                        message = pickle.dumps(event)
+                        message = pickle.dumps(AbnormalEventMSG(type=MSG_TYPE_TRAFFIC, data=event))
                         self.MQ_Event.send(self.MQ_Event_Topic, message)
 
                     # 删除文件

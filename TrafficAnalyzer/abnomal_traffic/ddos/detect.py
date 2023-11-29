@@ -9,7 +9,8 @@ from sklearn.preprocessing import LabelEncoder
 import sys
 from pathlib import Path
 
-from abnomal_traffic.msg_models.models import AbnormalFlowModel, FLOW_TYPE_DDOS
+from TrafficAnalyzer.message import AbnormalEventMSG, MSG_TYPE_TRAFFIC
+from abnomal_traffic.msg_models.models import AbnormalTraffic, FLOW_TYPE_DDOS
 
 
 class DDoS_Detector:
@@ -69,13 +70,13 @@ class DDoS_Detector:
         # 目标IP超过一定值则认为是真正目标
         for ip, pkts in dst_ip_dict.items():
             if len(pkts) > 0.3*len(pkt_list):
-                event = AbnormalFlowModel(
+                event = AbnormalTraffic(
                     type=FLOW_TYPE_DDOS,
                     time=datetime.now(),
                     src="",
                     dst=ip,
                     detail=copy.deepcopy(pkts))
-                message = pickle.dumps(event)
+                message = pickle.dumps(AbnormalEventMSG(type=MSG_TYPE_TRAFFIC, data=event))
                 self.MQ_Event.send(self.MQ_Event_Topic, message)
         
 

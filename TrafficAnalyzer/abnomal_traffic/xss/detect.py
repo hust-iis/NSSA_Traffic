@@ -12,7 +12,8 @@ import urllib.parse
 # import tensorflow.compat.v1 as tf
 # tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 
-from abnomal_traffic.msg_models.models import AbnormalFlowModel, FLOW_TYPE_XSS
+from TrafficAnalyzer.message import AbnormalEventMSG, MSG_TYPE_TRAFFIC
+from abnomal_traffic.msg_models.models import AbnormalTraffic, FLOW_TYPE_XSS
 
 
 class XSS_Detector:
@@ -27,7 +28,7 @@ class XSS_Detector:
     # 告警
     def alert(self, pkt):
         # 创建消息
-        event = AbnormalFlowModel(
+        event = AbnormalTraffic(
             type=FLOW_TYPE_XSS,
             time=datetime.now(),
             src=pkt.ip.src,
@@ -35,7 +36,7 @@ class XSS_Detector:
             detail=copy.deepcopy(pkt)
         )
         # push消息
-        message = pickle.dumps(event)
+        message = pickle.dumps(AbnormalEventMSG(type=MSG_TYPE_TRAFFIC, data=event))
         self.MQ_Event.send(self.MQ_Event_Topic, message)
         return
 

@@ -16,7 +16,8 @@ from pathlib import Path
 from kafka import KafkaConsumer, KafkaProducer
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
-from msg_models.models import AbnormalFlowModel, FLOW_TYPE_VIRUS
+from TrafficAnalyzer.message import AbnormalEventMSG, MSG_TYPE_TRAFFIC
+from msg_models.models import AbnormalTraffic, FLOW_TYPE_VIRUS
 
 
 class Virus_Detector:
@@ -175,13 +176,13 @@ class Virus_Detector:
                     res = self.checkVirus(filename)
                     if res == 1:
                         # 发送消息到事件队列
-                        event = AbnormalFlowModel(
+                        event = AbnormalTraffic(
                             type=FLOW_TYPE_VIRUS,
                             time=datetime.now(),
                             src=src_ip,
                             dst=dst_ip,
                             detail=copy.deepcopy(pkt))
-                        message = pickle.dumps(event)
+                        message = pickle.dumps(AbnormalEventMSG(type=MSG_TYPE_TRAFFIC, data=event))
                         self.MQ_Event.send(self.MQ_Event_Topic, message)
 
                     # 删除文件
