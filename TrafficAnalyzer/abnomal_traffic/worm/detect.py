@@ -14,9 +14,8 @@ import sys
 from pathlib import Path
 from kafka import KafkaConsumer
 
-sys.path.append(str(Path(__file__).resolve().parents[1]))
-from TrafficAnalyzer.message import AbnormalEventMSG, MSG_TYPE_TRAFFIC
-from msg_models.models import AbnormalTraffic, FLOW_TYPE_WORM
+from message import AbnormalEventMSG, MSG_TYPE_TRAFFIC
+from abnomal_traffic.msg_models.models import AbnormalTraffic, FLOW_TYPE_WORM
 
 class Worm_Detector:
     # 初始化：配置项

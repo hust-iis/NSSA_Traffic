@@ -1,15 +1,11 @@
 import copy
 import pickle
-import time
 from datetime import datetime
 
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder
 
-import sys
-from pathlib import Path
-
-from TrafficAnalyzer.message import AbnormalEventMSG, MSG_TYPE_TRAFFIC
+from message import AbnormalEventMSG, MSG_TYPE_TRAFFIC
 from abnomal_traffic.msg_models.models import AbnormalTraffic, FLOW_TYPE_DDOS
 
 

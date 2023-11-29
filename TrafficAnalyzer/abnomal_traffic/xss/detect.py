@@ -12,7 +12,7 @@ import urllib.parse
 # import tensorflow.compat.v1 as tf
 # tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 
-from TrafficAnalyzer.message import AbnormalEventMSG, MSG_TYPE_TRAFFIC
+from message import AbnormalEventMSG, MSG_TYPE_TRAFFIC
 from abnomal_traffic.msg_models.models import AbnormalTraffic, FLOW_TYPE_XSS
 
 

@@ -9,7 +9,7 @@ mq:
   worm_group_id: worm
   virus_group_id: virus
   webshell_group_id: webshell
-  port_scan_id: port_scan
+  port_scan_id: snort
 
 abnormal_traffic:
   ddos:

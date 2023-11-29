@@ -6,7 +6,7 @@ import struct
 
 import numpy
 
-from TrafficAnalyzer.message import AbnormalEventMSG, MSG_TYPE_TRAFFIC
+from message import AbnormalEventMSG, MSG_TYPE_TRAFFIC
 from abnomal_traffic.msg_models.models import AbnormalTraffic, FLOW_TYPE_BOTNET
 
 

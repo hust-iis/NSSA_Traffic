@@ -4,20 +4,13 @@ from datetime import datetime
 import csv
 import os
 import pickle
-from queue import Queue
 import pandas as pd
-import pyinotify
-from distutils.log import info
 
-import yaml
 from elftools.elf.elffile import ELFFile
-import sys
 from pathlib import Path
-from kafka import KafkaConsumer, KafkaProducer
 
-sys.path.append(str(Path(__file__).resolve().parents[1]))
-from TrafficAnalyzer.message import AbnormalEventMSG, MSG_TYPE_TRAFFIC
-from msg_models.models import AbnormalTraffic, FLOW_TYPE_VIRUS
+from message import AbnormalEventMSG, MSG_TYPE_TRAFFIC
+from abnomal_traffic.msg_models.models import AbnormalTraffic, FLOW_TYPE_VIRUS
 
 
 class Virus_Detector:
