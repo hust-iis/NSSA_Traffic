@@ -5,8 +5,8 @@ import pickle
 import yaml
 from kafka import KafkaProducer
 
-from message import AbnormalEventMSG, MSG_TYPE_TRAFFIC
-from abnomal_traffic.msg_models.models import AbnormalTraffic, FLOW_TYPE_PORTSCAN, FLOW_TYPE_SQLINJECT, FLOW_TYPE_XMLINJECT
+from TrafficAnalyzer.message import AbnormalEventMSG, MSG_TYPE_TRAFFIC
+from TrafficAnalyzer.abnomal_traffic.msg_models.models import AbnormalTraffic, FLOW_TYPE_PORTSCAN, FLOW_TYPE_SQLINJECT, FLOW_TYPE_XMLINJECT
 
 
 class Snort_Detector:
@@ -22,9 +22,17 @@ class Snort_Detector:
         self.interface = interface
         self.luapath = luapath
         self.snortpath = snortpath
-        with open('alert_json.txt', 'r') as file:
+        with open('./abnomal_traffic/snort/alert_json.txt', 'r') as file:
             content = file.read()
-            self.old_lines = len(content.split('\n'))
+            lines = content.split('\n')
+            line_count = len(lines)
+            if line_count > 5000:
+                # 执行删除操作，清空文件内容
+                with open('./abnomal_traffic/snort/alert_json.txt', 'w') as file:
+                    pass
+                self.old_lines = 0
+            else:
+                self.old_lines = line_count
 
     def detect(self):
         flag = True
@@ -41,7 +49,7 @@ class Snort_Detector:
                 self.password, self.snortpath, self.luapath, self.interface))
             os.system('gnome-terminal -x bash -c \' echo {} | sudo -S {} -c {} -A alert_json -i {} -s 65535 -k none -l ./ ;exec bash \' '.format(
                 self.password, self.snortpath, self.luapath, self.interface))
-            os.system('echo {} | sudo -S chmod 777 alert_json.txt'.format(123456))
+            os.system('echo {} | sudo -S chmod 777 ./abnomal_traffic/snort/alert_json.txt'.format(self.password))
         self.sudo_cmd_flag = True
 
     def predict(self):
@@ -49,7 +57,7 @@ class Snort_Detector:
 
         # print("port_scan_openfile")
         # print(length)
-        with open('alert_json.txt', 'r') as file:
+        with open('./abnomal_traffic/snort/alert_json.txt', 'r') as file:
             for i in range(self.old_lines):
                 file.readline()
                 # print("oldline")
@@ -58,15 +66,9 @@ class Snort_Detector:
                 if not line:
                     break
                 self.old_lines += 1
-                # print(line)
-                # if 'TCP SYN/Normal scan from host' in line:
                 print(line)
                 json_data = json.loads(line)
-                # print(json_data["msg"])
-                # print(json_data["dst_ap"])
-                # print(json_data["src_ap"])
-                # print(json_data["timestamp"])
-                if "SNMP" or "SCAN" in json_data["msg"]:
+                if "Port Scan" in json_data["msg"]:
                     event = AbnormalTraffic(
                         type=FLOW_TYPE_PORTSCAN,
                         time=json_data["timestamp"],
@@ -98,13 +100,13 @@ def init_config(config_file):
 
 
 if __name__ == '__main__':
-    args_config = init_config('../../config.yaml')
+    args_config = init_config('./config.yaml')
     # snort
-    port_scan_producer = KafkaProducer(bootstrap_servers=args_config['mq']['bootstrap_servers'])
-    port_scan_detector = Snort_Detector(event_producer=port_scan_producer,
+    snort_producer = KafkaProducer(bootstrap_servers=args_config['mq']['bootstrap_servers'])
+    snort_detector = Snort_Detector(event_producer=snort_producer,
                                         topic=args_config['mq']['port_scan_id'],
                                         password=args_config['abnormal_traffic']['snort']['password'],
                                         luapath=args_config['abnormal_traffic']['snort']['luapath'],
                                         snortpath=args_config['abnormal_traffic']['snort']['snortpath'],
                                         interface=args_config['abnormal_traffic']['snort']['interface'])
-    port_scan_detector.detect()
+    snort_detector.detect()

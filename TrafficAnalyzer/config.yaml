@@ -11,6 +11,8 @@ mq:
   webshell_group_id: webshell
   snort_id: snort
   host_id: host
+  xss_group_id: xss
+  port_scan_id: xss
 
 abnormal_traffic:
   ddos:
@@ -25,9 +27,9 @@ abnormal_traffic:
   worm:
     model: ./abnomal_traffic/worm/Model/model.sav
   webshell:
-    model: ./abnomal_traffic/ddos/Models/train_model.m
-    count_vectorizer: ./abnomal_traffic/ddos/Models/CountVectorizer.pkl
-    transformer: ./abnomal_traffic/ddos/Models/transformer.pkl
+    model: ./abnomal_traffic/webshell/Models/train_model.m
+    count_vectorizer: ./abnomal_traffic/webshell/Models/CountVectorizer.pkl
+    transformer: ./abnomal_traffic/webshell/Models/transformer.pkl
   xss:
     model: ./abnomal_traffic/xss/Models/model.sav
   snort:
@@ -35,4 +37,5 @@ abnormal_traffic:
     interface: ens33
     snortpath: /home/xp/snort3-3.1.51.0/build/src/snort
     luapath: /home/xp/snort3-3.1.51.0/lua/snort.lua
+
 
