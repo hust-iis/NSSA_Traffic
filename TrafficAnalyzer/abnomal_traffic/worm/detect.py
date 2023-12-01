@@ -1,21 +1,16 @@
 import copy
-import time
 from datetime import datetime
 import csv
 import os
-import sys
 import pickle
-from queue import Queue
-import pandas as pd
-import pyinotify
-from distutils.log import info
-from elftools.elf.elffile import ELFFile
-import sys
 from pathlib import Path
-from kafka import KafkaConsumer
 
-from message import AbnormalEventMSG, MSG_TYPE_TRAFFIC
-from abnomal_traffic.msg_models.models import AbnormalTraffic, FLOW_TYPE_WORM
+import pandas as pd
+from elftools.elf.elffile import ELFFile
+
+
+from TrafficAnalyzer.message import AbnormalEventMSG, MSG_TYPE_TRAFFIC
+from TrafficAnalyzer.abnomal_traffic.msg_models.models import AbnormalTraffic, FLOW_TYPE_WORM
 
 class Worm_Detector:
     # 初始化：配置项
@@ -133,10 +128,15 @@ class Worm_Detector:
     def detect(self):
 
         filename = 'other.abc'
+        fin_set = 0
         # 逐包读取
         for msg in self.MQ_Traffic:
             # 获取ftp传输的文件
             pkt = pickle.loads(msg.value)
+            if (len(pkt.layers) >= 3) and pkt.layers[2].layer_name == 'tcp' :
+                fin_set = pkt.tcp.flags_fin
+                print(fin_set,"-- FIN debug")
+
             # 确定传输文件名以及后缀
             if len(pkt.layers) >= 4:
                 my_request_command = ""
@@ -153,7 +153,7 @@ class Worm_Detector:
                         print("request_arg")
                         my_request_arg = pkt.layers[3].request_arg
                         print(pkt.layers[3].request_arg)
-                    if my_request_command == 'RETR':
+                    if my_request_command == 'RETR' or 'STOR':
                         filename = my_request_arg
             if filename == 'other.abc':
                 continue
@@ -169,7 +169,7 @@ class Worm_Detector:
                     ftp_data = pkt.layers[9]
                     # 保存ftp文件到test目录下
                     writefile(filename, ftp_data)
-
+                if fin_set:
                     # checkTrojan
                     res = self.checkWorm(filename)
                     if res == 1:
@@ -184,7 +184,8 @@ class Worm_Detector:
                         self.MQ_Event.send(self.MQ_Event_Topic, message)
 
                     # 删除文件
-                    os.remove(filename)
+                    if Path('./abnomal_traffic/worm/' + filename).is_file():
+                        os.remove('./abnomal_traffic/worm/' + filename)
                     # 修改filename为默认值
                     filename = 'other.abc'
 
@@ -739,12 +740,15 @@ def clean_dataset(label):
     clean_data.to_csv('./abnomal_traffic/worm/Data/%s.csv'%label, index=False)   # save the cleaned data to perfect.csv
 
 def writefile(filename, ftp_data):
-    tmpfile = filename
+    tmpfile = "new_data.txt"
+    flag = 0
+    if filename.lower().endswith(".txt"):
+        flag = 1
+    # 写入ftp_data到临时文件
     with open(tmpfile, 'w') as f:
         f.write(str(ftp_data))
-    print("successfully write my file")
 
-    # 读取文件 调整内容
+    # 读取临时文件 调整内容并追加到原文件
     lines = []
     with open(tmpfile, 'r') as f:
         f.readline()
@@ -753,19 +757,22 @@ def writefile(filename, ftp_data):
             line = line[1:]  # 删除第二行第一个字符
             line = line.strip("\t")
             line = line[:-3]
+            if flag:
+                line = line[:-3]
             lines.append(line)
         for line in f:
             line = line.strip("\t")
             line = line[:-3]
+            if flag:
+                line = line[:-3]
             lines.append(line)
 
-    # 创建新文件并写入内容
-    with open('new_data.txt', 'w') as f:
+    # 追加调整后的内容到原文件
+    with open(filename, 'a') as f:
         for line in lines:
             f.write(line + "\n")
-
-    # 删除原文件
+    # 删除临时文件
     os.remove(tmpfile)
 
-    os.rename('new_data.txt', tmpfile)
+    print("successfully append data to file")
 

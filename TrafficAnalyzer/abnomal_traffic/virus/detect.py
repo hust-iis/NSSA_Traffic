@@ -1,16 +1,18 @@
 import copy
-import time
 from datetime import datetime
 import csv
 import os
 import pickle
 import pandas as pd
+import yaml
 
 from elftools.elf.elffile import ELFFile
 from pathlib import Path
 
-from message import AbnormalEventMSG, MSG_TYPE_TRAFFIC
-from abnomal_traffic.msg_models.models import AbnormalTraffic, FLOW_TYPE_VIRUS
+from kafka import KafkaConsumer, KafkaProducer
+
+from TrafficAnalyzer.message import AbnormalEventMSG, MSG_TYPE_TRAFFIC
+from TrafficAnalyzer.abnomal_traffic.msg_models.models import AbnormalTraffic, FLOW_TYPE_VIRUS
 
 
 class Virus_Detector:
@@ -130,10 +132,16 @@ class Virus_Detector:
     # 回调函数，初始时执行全量扫描，然后对路径进行监控，实现增量扫描
     def detect(self):
         filename = 'other.abc'
+        fin_set = 0
+
         # 逐包读取
         for msg in self.MQ_Traffic:
             # 获取ftp传输的文件
             pkt = pickle.loads(msg.value)
+            if (len(pkt.layers) >= 3) and pkt.layers[2].layer_name == 'tcp':
+                fin_set = pkt.tcp.flags_fin
+                print(fin_set,"-- FIN debug")
+
             # 确定传输文件名以及后缀
             if len(pkt.layers) >= 4:
                 my_request_command = ""
@@ -149,24 +157,26 @@ class Virus_Detector:
                         print("request_arg")
                         my_request_arg = pkt.layers[3].request_arg
                         print(pkt.layers[3].request_arg)
-                    if my_request_command == 'RETR':
+                    if my_request_command == 'RETR' or my_request_command == 'STOR':
                         filename = my_request_arg
+                        dst_ip = pkt.ip.dst
+                        src_ip = pkt.ip.src
             if filename == 'other.abc':
                 continue
             else:
                 # 已经获取传输的文件名，保存FTP中传输的文件数据为文件用于病毒检测
-                dst_ip = pkt.ip.dst
-                src_ip = pkt.ip.src
                 if (len(pkt.layers) >= 4 and pkt.layers[3].layer_name == 'ftp-data'
                         and pkt.highest_layer == 'DATA-TEXT-LINES'):
                     print("FTP-DATA pkt")
                     print(pkt)
                     ftp_data = pkt.layers[9]
-                    # 保存ftp文件到test目录下
+                    # 保存ftp文件到当前目录下
                     writefile(filename, ftp_data)
-
+                if fin_set:
+                    print("virus -- DEBUG")
                     # checkTrojan
-                    res = self.checkVirus(filename)
+                    # res = self.checkVirus(filename)
+                    res = 1
                     if res == 1:
                         # 发送消息到事件队列
                         event = AbnormalTraffic(
@@ -177,14 +187,11 @@ class Virus_Detector:
                             detail=copy.deepcopy(pkt))
                         message = pickle.dumps(AbnormalEventMSG(type=MSG_TYPE_TRAFFIC, data=event))
                         self.MQ_Event.send(self.MQ_Event_Topic, message)
-
                     # 删除文件
-                    # curdir = os.getcwd()
-                    if Path('./abnomal_traffic/virus/'+filename).is_file():
-                        os.remove('./abnomal_traffic/virus/'+filename)
+                    if Path('./abnomal_traffic/virus/' + filename).is_file():
+                        os.remove('./abnomal_traffic/virus/' + filename)
                     # 修改filename为默认值
                     filename = 'other.abc'
-
 
 # 处理文件，获取elf特征值，存入处理csv中
 def get_elf_info(elf, label):
@@ -842,14 +849,16 @@ def clean_dataset(label):
 
     clean_data.to_csv('./abnomal_traffic/virus/Data/%s.csv' % label, index=False)  # save the cleaned data to perfect.csv
 
-
 def writefile(filename, ftp_data):
-    tmpfile = filename
+    tmpfile = "new_data.txt"
+    flag = 0
+    if filename.lower().endswith(".txt"):
+        flag = 1
+    # 写入ftp_data到临时文件
     with open(tmpfile, 'w') as f:
         f.write(str(ftp_data))
-    print("successfully write my file")
 
-    # 读取文件 调整内容
+    # 读取临时文件 调整内容并追加到原文件
     lines = []
     with open(tmpfile, 'r') as f:
         f.readline()
@@ -858,44 +867,45 @@ def writefile(filename, ftp_data):
             line = line[1:]  # 删除第二行第一个字符
             line = line.strip("\t")
             line = line[:-3]
+            if flag:
+                line = line[:-3]
             lines.append(line)
         for line in f:
             line = line.strip("\t")
             line = line[:-3]
+            if flag:
+                line = line[:-3]
             lines.append(line)
 
-    # 创建新文件并写入内容
-    with open('new_data.txt', 'w') as f:
+    # 追加调整后的内容到原文件
+    with open(filename, 'a') as f:
         for line in lines:
             f.write(line + "\n")
-
-    # 删除原文件
+    # 删除临时文件
     os.remove(tmpfile)
 
-    os.rename('new_data.txt', tmpfile)
+    print("successfully append data to file")
 
+ # 解析配置
+def init_config(config_file):
+    with open(config_file, 'r') as f:
+        config = yaml.load(f, Loader=yaml.Loader)
+        return config
 
-#  解析配置
-# def init_config(config_file):
-#     with open(config_file, 'r') as f:
-#         config = yaml.load(f, Loader=yaml.Loader)
-#         return config
-#
-# if __name__ =='__main__':
-#
-#     args_config = init_config('../../config.yaml')
-#     print(args_config)
-#     virus_consumer = KafkaConsumer(args_config['mq']['traffic_topic'],
-#                                    group_id=args_config['mq']['virus_group_id'],
-#                                    bootstrap_servers=args_config['mq']['bootstrap_servers']
-#                                    )
-#     virus_producer = KafkaProducer(bootstrap_servers=args_config['mq']['bootstrap_servers'])
-#     # 创建对象
-#     virus_detector = Virus_Detector(traffic_consumer=virus_consumer,
-#                                            event_producer=virus_producer,
-#                                            topic=args_config['mq']['event_topic'],
-#                                            model_path=args_config['abnormal_traffic']['virus']['model'],
-#                                            test_path=args_config['abnormal_traffic']['virus']['test_path']
-#                                            )
-#     virus_detector.detect()
+if __name__ =='__main__':
+
+    args_config = init_config('../../config.yaml')
+    print(args_config)
+    virus_consumer = KafkaConsumer(args_config['mq']['traffic_topic'],
+                                   group_id=args_config['mq']['virus_group_id'],
+                                   bootstrap_servers=args_config['mq']['bootstrap_servers']
+                                   )
+    virus_producer = KafkaProducer(bootstrap_servers=args_config['mq']['bootstrap_servers'])
+    # 创建对象
+    virus_detector = Virus_Detector(traffic_consumer=virus_consumer,
+                                           event_producer=virus_producer,
+                                           topic=args_config['mq']['event_topic'],
+                                           model_path=args_config['abnormal_traffic']['virus']['model']
+                                           )
+    virus_detector.detect()
 
