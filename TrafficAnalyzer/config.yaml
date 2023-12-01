@@ -12,7 +12,7 @@ mq:
   snort_id: snort
   host_id: host
   xss_group_id: xss
-  port_scan_id: xss
+  port_scan_id: port_scan
 
 abnormal_traffic:
   ddos:
@@ -38,4 +38,21 @@ abnormal_traffic:
     snortpath: /home/xp/snort3-3.1.51.0/build/src/snort
     luapath: /home/xp/snort3-3.1.51.0/lua/snort.lua
 
+abnormal_host:
+  database1:
+    dialect: mysql
+    driver: pymysql
+    name: "abnormal_host"
+    host: 127.0.0.1
+    user: "root"
+    password: "123456"
+    port: 3306
+  database2:
+    dialect: mysql
+    driver: pymysql
+    name: "abnormal_host"
+    host: 127.0.0.1
+    user: "root"
+    password: "123456"
+    port: 3306
 

@@ -6,21 +6,3 @@ mq:
 traffic_gethering:
   interface: eno1
   capture_filter: tcp
-
-database1:
-  dialect: mysql
-  driver: pymysql
-  name: "abnormal_host"
-  host: 127.0.0.1
-  user: "root"
-  password: "123456"
-  port: 3306
-
-database2:
-  dialect: mysql
-  driver: pymysql
-  name: "abnormal_host"
-  host: 127.0.0.1
-  user: "root"
-  password: "123456"
-  port: 3306

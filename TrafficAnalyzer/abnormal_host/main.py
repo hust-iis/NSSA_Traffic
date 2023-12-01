@@ -16,10 +16,10 @@ class AbnormalHostMSG:
         self.time = time
 
 
-def init_config(config_file):
-    with open(config_file, 'r') as f:
-        config = yaml.load(f, Loader=yaml.Loader)
-        return config
+# def init_config(config_file):
+#     with open(config_file, 'r') as f:
+#         config = yaml.load(f, Loader=yaml.Loader)
+#         return config
 
 
 class AbnormalHost_send:
@@ -114,8 +114,8 @@ class AbnormalHost_send:
             if con2:
                 con2.close()
 
-    def main(self):
-        args_config = init_config('D:\\NSSA\\NSSA_Traffic\\config.yaml')
+    def main(self, args_config):
+        # args_config = init_config('D:\\NSSA\\NSSA_Traffic\\config.yaml')
         database_info1 = args_config['database1']  # 报警信息存入数据库
         database_info2 = args_config['database2']  # 查询name
         self.database_log(database_info1, database_info2)
