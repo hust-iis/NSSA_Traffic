@@ -166,7 +166,7 @@ def start_traffic(args_config):
                                       topic=args_config['mq']['event_topic'],
                                       )
     # webshell_detector.detect()
-    processes.append(Process(target=host_detector.main, args=()))
+    processes.append(Process(target=host_detector.main, args=(args_config['abnormal_host'])))
 
     # 开始进程
     for p in processes:
