@@ -143,8 +143,6 @@ class Worm_Detector:
                 my_request_arg = ""
                 if pkt.layers[3].layer_name == 'ftp':
                     ftp_pkt = pkt.layers[3]
-                    print("ftp pkt")
-                    print(pkt.layers[3].field_names)
                     if 'request_command' in pkt.layers[3].field_names:
                         print("request_command")
                         my_request_command = pkt.layers[3].request_command

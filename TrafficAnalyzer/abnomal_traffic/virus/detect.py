@@ -129,10 +129,11 @@ class Virus_Detector:
             pass
         return 0
 
-    # 回调函数，初始时执行全量扫描，然后对路径进行监控，实现增量扫描
     def detect(self):
-        filename = 'other.abc'
+        filename = 'default.abc'
         fin_set = 0
+        src_ip = ''
+        dst_ip = ''
 
         # 逐包读取
         for msg in self.MQ_Traffic:
@@ -147,8 +148,6 @@ class Virus_Detector:
                 my_request_command = ""
                 my_request_arg = ""
                 if pkt.layers[3].layer_name == 'ftp':
-                    ftp_pkt = pkt.layers[3]
-                    print("ftp pkt")
                     if 'request_command' in pkt.layers[3].field_names:
                         print("request_command")
                         my_request_command = pkt.layers[3].request_command
@@ -161,10 +160,11 @@ class Virus_Detector:
                         filename = my_request_arg
                         dst_ip = pkt.ip.dst
                         src_ip = pkt.ip.src
-            if filename == 'other.abc':
+
+            if filename == 'default.abc':
                 continue
             else:
-                # 已经获取传输的文件名，保存FTP中传输的文件数据为文件用于病毒检测
+                #已经获取传输的文件名，保存FTP中传输的文件数据为文件用于病毒检测
                 if (len(pkt.layers) >= 4 and pkt.layers[3].layer_name == 'ftp-data'
                         and pkt.highest_layer == 'DATA-TEXT-LINES'):
                     print("FTP-DATA pkt")
@@ -172,10 +172,13 @@ class Virus_Detector:
                     ftp_data = pkt.layers[9]
                     # 保存ftp文件到当前目录下
                     writefile(filename, ftp_data)
+                    with open(filename,'r') as f:
+                        line = f.read()
+                        print(line)
                 if fin_set:
                     print("virus -- DEBUG")
                     # checkTrojan
-                    # res = self.checkVirus(filename)
+                    res = self.checkVirus(filename)
                     res = 1
                     if res == 1:
                         # 发送消息到事件队列
@@ -191,7 +194,7 @@ class Virus_Detector:
                     if Path('./abnomal_traffic/virus/' + filename).is_file():
                         os.remove('./abnomal_traffic/virus/' + filename)
                     # 修改filename为默认值
-                    filename = 'other.abc'
+                    filename = 'default.abc'
 
 # 处理文件，获取elf特征值，存入处理csv中
 def get_elf_info(elf, label):

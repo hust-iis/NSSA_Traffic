@@ -47,7 +47,7 @@ class Snort_Detector:
         if self.sudo_cmd_flag == False:
             print('gnome-terminal -x bash -c \' echo {} | sudo -S {} -c {} -A alert_json -i {} -s 65535 -k none -l ./ ;exec bash \' '.format(
                 self.password, self.snortpath, self.luapath, self.interface))
-            os.system('gnome-terminal -x bash -c \' echo {} | sudo -S {} -c {} -A alert_json -i {} -s 65535 -k none -l ./ ;exec bash \' '.format(
+            os.system('gnome-terminal -x bash -c \' echo {} | sudo -S {} -c {} -A alert_json -i {} -s 65535 -k none -l ./abnomal_traffic/snort ;exec bash \' '.format(
                 self.password, self.snortpath, self.luapath, self.interface))
             os.system('echo {} | sudo -S chmod 777 ./abnomal_traffic/snort/alert_json.txt'.format(self.password))
         self.sudo_cmd_flag = True
@@ -57,7 +57,7 @@ class Snort_Detector:
 
         # print("port_scan_openfile")
         # print(length)
-        with open('./abnomal_traffic/snort/alert_json.txt', 'r') as file:
+        with open('./abnomal_traffic/snort/alert_json.txt', 'r+') as file:
             for i in range(self.old_lines):
                 file.readline()
                 # print("oldline")

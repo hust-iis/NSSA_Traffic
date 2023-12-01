@@ -132,7 +132,7 @@ class Trojan_Detector:
         for msg in self.MQ_Traffic:
             # 获取ftp传输的文件
             pkt = pickle.loads(msg.value)
-            if (len(pkt.layers) >= 3) and pkt.layers[2].layer_name == 'tcp' :
+            if (len(pkt.layers) >= 3) and pkt.layers[2].layer_name == 'tcp':
                 fin_set = pkt.tcp.flags_fin
                 print(fin_set,"-- FIN debug")
 
@@ -143,7 +143,6 @@ class Trojan_Detector:
                 if pkt.layers[3].layer_name == 'ftp':
                     ftp_pkt = pkt.layers[3]
                     # print("ftp输出")
-                    print(pkt.layers[3].field_names)
                     if 'request_command' in pkt.layers[3].field_names:
                         # print("request_command")
                         my_request_command = pkt.layers[3].request_command
