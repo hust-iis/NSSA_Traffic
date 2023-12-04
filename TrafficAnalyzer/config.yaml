@@ -1,0 +1,58 @@
+mq:
+  bootstrap_servers: localhost:9092
+  traffic_topic: net-traffic
+  event_topic: abnormal-events
+
+  ddos_group_id: ddos
+  botnet_group_id: botnet
+  trojan_group_id: trojan
+  worm_group_id: worm
+  virus_group_id: virus
+  webshell_group_id: webshell
+  snort_id: snort
+  host_id: host
+  xss_group_id: xss
+  port_scan_id: port_scan
+
+abnormal_traffic:
+  ddos:
+    model: ./abnomal_traffic/ddos/Models/231110_2
+    encoder: ./abnomal_traffic/ddos/Models/231110_2.enc
+  botnet:
+    model: ./abnomal_traffic/botnet/Models/model.pkl
+  trojan:
+    model: ./abnomal_traffic/trojan/Model/model.sav
+  virus:
+    model: ./abnomal_traffic/virus/Model/model.sav
+  worm:
+    model: ./abnomal_traffic/worm/Model/model.sav
+  webshell:
+    model: ./abnomal_traffic/webshell/Models/train_model.m
+    count_vectorizer: ./abnomal_traffic/webshell/Models/CountVectorizer.pkl
+    transformer: ./abnomal_traffic/webshell/Models/transformer.pkl
+  xss:
+    model: ./abnomal_traffic/xss/Models/model.sav
+  snort:
+    password: 123456
+    interface: ens33
+    snortpath: /home/xp/snort3-3.1.51.0/build/src/snort
+    luapath: /home/xp/snort3-3.1.51.0/lua/snort.lua
+
+abnormal_host:
+  database1:
+    dialect: mysql
+    driver: pymysql
+    name: "abnormal_host"
+    host: 127.0.0.1
+    user: "root"
+    password: "123456"
+    port: 3306
+  database2:
+    dialect: mysql
+    driver: pymysql
+    name: "abnormal_host"
+    host: 127.0.0.1
+    user: "root"
+    password: "123456"
+    port: 3306
+
