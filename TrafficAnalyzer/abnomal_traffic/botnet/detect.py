@@ -32,7 +32,10 @@ class Botnet_Detector:
         data = []
         # 特征解析
         duration = pkt.frame_info.time_delta_displayed
-        protocol = pkt.transport_layer.lower()  # proto
+        if pkt.transport_layer == None or pkt.transport_layer == 'UDP':
+            return False
+        else:
+            protocol = pkt.transport_layer.lower()  # proto
 
         src_ip = pkt.ip.src
         src_ip = socket.inet_aton(src_ip)
