@@ -11,7 +11,7 @@ def init_config(config_file):
 
 def main():
     # 获取配置
-    args_config = init_config('../config.yaml')
+    args_config = init_config('./config.yaml')
     # 设置消息队列
     producer = KafkaProducer(bootstrap_servers=args_config['mq']['server'])
     topic = args_config['mq']['traffic_topic']

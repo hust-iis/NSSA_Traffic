@@ -1,0 +1,9 @@
+mq:
+  server: localhost:9092
+  traffic_topic: net-traffic
+  event_topic: abnormal-events
+
+traffic_gathering:
+  interface: enp1s0
+  capture_filter: tcp
+
