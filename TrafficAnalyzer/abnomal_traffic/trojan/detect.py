@@ -9,8 +9,8 @@ from pathlib import Path
 import pandas as pd
 
 from elftools.elf.elffile import ELFFile
-from TrafficAnalyzer.message import AbnormalEventMSG, MSG_TYPE_TRAFFIC
-from TrafficAnalyzer.abnomal_traffic.msg_models.models import AbnormalTraffic, FLOW_TYPE_TROJAN
+from message import AbnormalEventMSG, MSG_TYPE_TRAFFIC
+from abnomal_traffic.msg_models.models import AbnormalTraffic, FLOW_TYPE_TROJAN
 
 
 class Trojan_Detector:

@@ -9,8 +9,8 @@ import pandas as pd
 from elftools.elf.elffile import ELFFile
 
 
-from TrafficAnalyzer.message import AbnormalEventMSG, MSG_TYPE_TRAFFIC
-from TrafficAnalyzer.abnomal_traffic.msg_models.models import AbnormalTraffic, FLOW_TYPE_WORM
+from message import AbnormalEventMSG, MSG_TYPE_TRAFFIC
+from abnomal_traffic.msg_models.models import AbnormalTraffic, FLOW_TYPE_WORM
 
 class Worm_Detector:
     # 初始化：配置项

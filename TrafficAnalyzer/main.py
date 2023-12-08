@@ -2,7 +2,7 @@ import yaml
 from multiprocessing import Process
 from kafka import KafkaProducer, KafkaConsumer
 
-from TrafficAnalyzer.abnormal_host.main import AbnormalHost_send
+from abnormal_host.main import AbnormalHost_send
 from abnomal_traffic.botnet.detect import Botnet_Detector
 from abnomal_traffic.ddos.detect import DDoS_Detector
 from abnomal_traffic.virus.detect import Virus_Detector

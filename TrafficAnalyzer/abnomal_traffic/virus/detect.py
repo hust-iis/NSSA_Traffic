@@ -11,8 +11,8 @@ from pathlib import Path
 
 from kafka import KafkaConsumer, KafkaProducer
 
-from TrafficAnalyzer.message import AbnormalEventMSG, MSG_TYPE_TRAFFIC
-from TrafficAnalyzer.abnomal_traffic.msg_models.models import AbnormalTraffic, FLOW_TYPE_VIRUS
+from message import AbnormalEventMSG, MSG_TYPE_TRAFFIC
+from abnomal_traffic.msg_models.models import AbnormalTraffic, FLOW_TYPE_VIRUS
 
 
 class Virus_Detector:

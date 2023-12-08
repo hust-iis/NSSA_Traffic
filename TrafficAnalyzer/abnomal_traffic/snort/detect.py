@@ -5,8 +5,8 @@ import pickle
 import yaml
 from kafka import KafkaProducer
 
-from TrafficAnalyzer.message import AbnormalEventMSG, MSG_TYPE_TRAFFIC
-from TrafficAnalyzer.abnomal_traffic.msg_models.models import AbnormalTraffic, FLOW_TYPE_PORTSCAN, FLOW_TYPE_SQLINJECT, FLOW_TYPE_XMLINJECT
+from message import AbnormalEventMSG, MSG_TYPE_TRAFFIC
+from abnomal_traffic.msg_models.models import AbnormalTraffic, FLOW_TYPE_PORTSCAN, FLOW_TYPE_SQLINJECT, FLOW_TYPE_XMLINJECT
 
 
 class Snort_Detector:
