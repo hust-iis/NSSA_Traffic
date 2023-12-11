@@ -1,6 +1,7 @@
 import yaml
 import pickle
 import pyshark
+import time
 from kafka import KafkaProducer
 
 # 解析配置
@@ -25,6 +26,8 @@ def main():
     for pkt in capture:
         message = pickle.dumps(pkt)
         producer.send(topic, message)
+        print("send 1 msg")
+        time.sleep(0.5)
 
 if __name__ == '__main__':
     main()

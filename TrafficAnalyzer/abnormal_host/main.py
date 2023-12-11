@@ -1,9 +1,8 @@
 import pickle
-
 import pymysql
 import yaml
-from pymysql import Connection
 
+from pymysql import Connection
 from abnomal_traffic.msg_models.models import AbnormalTraffic
 from message import AbnormalEventMSG, MSG_TYPE_HOST
 

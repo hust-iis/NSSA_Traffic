@@ -141,7 +141,7 @@ class Virus_Detector:
             pkt = pickle.loads(msg.value)
             if (len(pkt.layers) >= 3) and pkt.layers[2].layer_name == 'tcp':
                 fin_set = pkt.tcp.flags_fin
-                print(fin_set,"-- FIN debug")
+                # print(fin_set,"-- FIN debug")
 
             # 确定传输文件名以及后缀
             if len(pkt.layers) >= 4:

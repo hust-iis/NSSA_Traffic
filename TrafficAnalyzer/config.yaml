@@ -33,26 +33,26 @@ abnormal_traffic:
   xss:
     model: ./abnomal_traffic/xss/Models/model.sav
   snort:
-    password: 123456
-    interface: ens33
-    snortpath: /home/xp/snort3-3.1.51.0/build/src/snort
-    luapath: /home/xp/snort3-3.1.51.0/lua/snort.lua
+    password: c317c317
+    interface: enp1s0
+    snortpath: /usr/local/bin/snort
+    luapath: /usr/local/etc/snort/snort.lua
 
 abnormal_host:
   database1:
     dialect: mysql
     driver: pymysql
-    name: "abnormal_host"
-    host: 127.0.0.1
-    user: "root"
-    password: "123456"
-    port: 3306
+    name: "nssa-database"
+    host: 172.16.44.141
+    user: "nssa"
+    password: "c317c317"
+    port: 3366
   database2:
     dialect: mysql
     driver: pymysql
     name: "abnormal_host"
-    host: 127.0.0.1
-    user: "root"
-    password: "123456"
-    port: 3306
+    host: 172.16.44.141
+    user: "nssa"
+    password: "c317c317"
+    port: 3366
 
